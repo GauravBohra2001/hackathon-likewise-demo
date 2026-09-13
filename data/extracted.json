@@ -254,16 +254,14 @@
     "extraction": {
       "operation": "tell_customer",
       "destructive": false,
-      "reversible": false,
+      "reversible": true,
       "customer_facing": true,
       "evidence_of_resolution": false,
       "urgency": false
     },
     "extracted_target": "#3",
-    "confidence": "low",
-    "low_confidence_reasons": [
-      "model flagged unclear: ['reversible']"
-    ],
+    "confidence": "high",
+    "low_confidence_reasons": [],
     "cautious": "ask",
     "trusting": "ask"
   },
@@ -295,7 +293,7 @@
       "operation": "delete",
       "destructive": true,
       "reversible": false,
-      "customer_facing": false,
+      "customer_facing": true,
       "evidence_of_resolution": false,
       "urgency": false
     },
@@ -338,10 +336,8 @@
       "urgency": true
     },
     "extracted_target": "HAC-5",
-    "confidence": "low",
-    "low_confidence_reasons": [
-      "model flagged unclear: ['customer_facing']"
-    ],
+    "confidence": "high",
+    "low_confidence_reasons": [],
     "cautious": "act",
     "trusting": "act"
   },
@@ -382,5 +378,64 @@
     "low_confidence_reasons": [],
     "cautious": "ask",
     "trusting": "act"
+  },
+  {
+    "id": 21,
+    "text": "close all the open checkout issues, I'm pretty sure they're all the same underlying bug",
+    "app": "github",
+    "target": "1,2,3",
+    "extraction": {
+      "operation": "close",
+      "destructive": false,
+      "reversible": true,
+      "customer_facing": false,
+      "evidence_of_resolution": false,
+      "urgency": false
+    },
+    "extracted_target": "",
+    "confidence": "low",
+    "low_confidence_reasons": [
+      "model flagged unclear: ['customer_facing']"
+    ],
+    "cautious": "ask",
+    "trusting": "ask"
+  },
+  {
+    "id": 22,
+    "text": "reopen #1, I think whoever closed it was wrong about the fix actually landing",
+    "app": "github",
+    "target": "1",
+    "extraction": {
+      "operation": "reopen",
+      "destructive": false,
+      "reversible": true,
+      "customer_facing": false,
+      "evidence_of_resolution": false,
+      "urgency": false
+    },
+    "extracted_target": "#1",
+    "confidence": "high",
+    "low_confidence_reasons": [],
+    "cautious": "ask",
+    "trusting": "ask"
+  },
+  {
+    "id": 23,
+    "text": "tell the customer on #3 we'll refund them and comp their next month as well",
+    "app": "github",
+    "target": "3",
+    "extraction": {
+      "operation": "tell_customer",
+      "destructive": false,
+      "reversible": true,
+      "customer_facing": true,
+      "evidence_of_resolution": false,
+      "urgency": false
+    },
+    "extracted_target": "#3",
+    "confidence": "high",
+    "low_confidence_reasons": [],
+    "cautious": "ask",
+    "trusting": "ask"
   }
 ]
