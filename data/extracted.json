@@ -437,5 +437,62 @@
     "low_confidence_reasons": [],
     "cautious": "ask",
     "trusting": "ask"
+  },
+  {
+    "id": 24,
+    "text": "reopen #3, the customer just messaged that the double charge happened again this morning",
+    "app": "github",
+    "target": "3",
+    "extraction": {
+      "operation": "reopen",
+      "destructive": false,
+      "reversible": true,
+      "customer_facing": false,
+      "evidence_of_resolution": false,
+      "urgency": true
+    },
+    "extracted_target": "#3",
+    "confidence": "high",
+    "low_confidence_reasons": [],
+    "cautious": "ask",
+    "trusting": "act"
+  },
+  {
+    "id": 25,
+    "text": "reopen #2, we closed it as a duplicate but it's actually a different root cause in the session layer",
+    "app": "github",
+    "target": "2",
+    "extraction": {
+      "operation": "reopen",
+      "destructive": false,
+      "reversible": true,
+      "customer_facing": false,
+      "evidence_of_resolution": false,
+      "urgency": false
+    },
+    "extracted_target": "#2",
+    "confidence": "high",
+    "low_confidence_reasons": [],
+    "cautious": "ask",
+    "trusting": "act"
+  },
+  {
+    "id": 26,
+    "text": "reopen #1 maybe? I'm not totally sure the Safari fix actually covers the iOS 16 case",
+    "app": "github",
+    "target": "1",
+    "extraction": {
+      "operation": "reopen",
+      "destructive": false,
+      "reversible": true,
+      "customer_facing": false,
+      "evidence_of_resolution": false,
+      "urgency": false
+    },
+    "extracted_target": "#1",
+    "confidence": "high",
+    "low_confidence_reasons": [],
+    "cautious": "ask",
+    "trusting": "ask"
   }
 ]
