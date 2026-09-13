@@ -143,8 +143,6 @@ destructive that cannot be undone is never delegated.
 It works across Slack, GitHub and Linear, and every action it reports is a real API call
 against real data.
 
-
-
 The three nodes are deterministic steps in a fixed sequence, not autonomous agents calling each
 other. Only the extraction step calls a model; the decision step is plain Python, which is what
 makes every outcome auditable.
