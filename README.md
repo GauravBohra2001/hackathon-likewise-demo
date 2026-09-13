@@ -1,19 +1,6 @@
 # Ask Only When It Matters
 
-## What this is
-
-Most devops assistants have one setting: either they ask you before everything, which makes them
-tedious, or they act on everything, which makes them dangerous. Neither matches how people
-actually work, because the same request is routine for one person and alarming for another.
-
-This agent learns where that line sits for each individual. It reads a request from Slack,
-works out what is actually being asked, compares it against what that specific person has
-approved before, and then either does it, holds it for confirmation, or refuses outright. Some
-things it refuses for everyone no matter what they have approved in the past: anything
-destructive that cannot be undone is never delegated.
-
-It works across Slack, GitHub and Linear, and every action it reports is a real API call
-against real data.
+A Slack-to-devops agent that learns, per person, when to just do the thing and when to stop and ask.
 
 ```mermaid
 flowchart LR
@@ -34,11 +21,18 @@ flowchart LR
     A --> J["traces.jsonl<br/>full decision record"]
 ```
 
-The three nodes are deterministic steps in a fixed sequence, not autonomous agents calling each
-other. Only the extraction step calls a model; the decision step is plain Python, which is what
-makes every outcome auditable.
+> ### The honest headline
+>
+> Personalization beats a fixed rule decisively where it matters (up to **+55.6 points**).
+> It **failed our own safety bar by exactly one case out of 23**.
+> We traced that failure to its exact cause instead of hiding it.
+> Full evaluation below.
 
-## Quick verify
+**[Quick Verify](#quick-verify)** | **[How to Run](#how-to-run)** | **[Full Reliability Brief](#full-reliability-brief-detailed)** | **[Known Limitations](#known-limitations)**
+
+---
+
+## Quick Verify
 
 ```
 git clone https://github.com/GauravBohra2001/hackathon-likewise-demo.git
@@ -56,78 +50,7 @@ the evaluation runs entirely against a committed extraction cache.
 Credentials are only required to run the agent against live Slack, GitHub and Linear. See
 "How to run it" below for that.
 
-A Slack-to-devops agent that decides, per person, whether a request should be executed
-immediately, held for confirmation, or refused outright - so it asks when it matters and
-gets out of the way when it does not.
-
-Built with LangGraph and Python against Slack, GitHub, and Linear, with extraction served by
-Azure AI Foundry.
-
-## Repository layout
-
-```
-src/config.py            shared env loading + AzureOpenAI client
-src/nodes/extraction.py  NODE 1 - Slack message -> structured JSON
-src/nodes/decision.py    NODE 2 - deterministic act / ask / refuse
-src/nodes/action.py      NODE 3 - real execution against Slack, GitHub, Linear
-src/clients/             thin real API clients (slack, github, linear)
-src/graph.py             the orchestrator wiring the three nodes (+ HITL variant)
-src/slack_listener.py    polls Slack for human messages and feeds them to the graph
-src/learning.py          records approved/rejected drafts as new labeled examples
-src/humanize.py          plain-English Slack wording (kept out of decision logic)
-src/trace.py             per-action decision trace written to traces.jsonl
-data/labeled_examples.json  26 requests, labeled twice (cautious, trusting)
-data/extracted.json         cached extractions the eval reads
-eval/loo.py                 the eval gate (--config selects the extraction cache)
-data/extracted_headline_config.json  preserved cache behind the headline numbers
-scripts/doctor.py           read-only preflight check of every live dependency
-Makefile                    make doctor / make headline / make eval / make reset
-eval/results_d8d0958.txt    raw gate output for the 23-example headline result
-eval/results_26examples_FAIL.txt  raw gate output for the reopen follow-up
-eval/results_7field_FAIL.txt      raw gate output for the schema-fix attempt
-scripts/                    Step 0 auth verification + seeding + sandbox reset
-```
-
----
-
-## Short System and Reliability Brief
-
-### What was built, and which 3 apps it uses
-
-**Ask Only When It Matters** is a Slack-to-devops agent that decides, per person, whether a
-request should be executed immediately, held for confirmation, or refused outright.
-
-It is a LangGraph orchestrator over **three deterministic nodes** - not autonomous or
-recursive agents:
-
-1. **Extraction** - a raw Slack message becomes structured JSON via the model's
-   structured-output mode (strict `json_schema`). Fields: `operation` (a closed category of
-   ten), plus seven booleans: `destructive`, `reversible`, `customer_facing`,
-   `evidence_of_resolution`, `urgency`, `new_information_present` and
-   `overrides_prior_decision`. The last two were added in configuration D to capture *why* a
-   request is being made, not just what it does. The model additionally reports any field it
-   could not determine. The extracted JSON is logged alongside every decision made from it.
-2. **Decision** - pure Python, no model call, fixed order of evaluation.
-3. **Action** - executes for real against seeded sandbox data. Every write is followed by a
-   separate read of the same record, and the reported result is built from that verification
-   read rather than from the write's own response; a write that does not verify raises instead
-   of reporting success.
-
-**The three apps are Slack, GitHub, and Linear.** Slack is where requests arrive and where
-every outcome is reported. GitHub issues and Linear tickets are what get acted on.
-
-#### Decision order (fixed, never reordered)
-
-| Step | Rule |
-|------|------|
-| a | **Safety floor.** `destructive AND NOT reversible` -> always refuse. Every user, no exceptions, no learning. Deliberately *not* conditioned on `customer_facing`, so it also catches irreversible-but-internal actions. |
-| b | Extraction confidence low on any field -> **ask**. |
-| c | Similarity-match against *this person's* labeled examples. Operation exact match 0.60; each matching flag 0.06, so up to 0.42 across the seven flags; text similarity 0.10. The per-flag weight is fixed rather than a shared budget, so adding a flag adds discriminating power instead of diluting the existing ones. |
-| d | Votes weighted by similarity, not flat majority. |
-| e | **`act` must win by a real margin.** Act votes take an explicit 0.70 discount, then must beat the runner-up by 1.20x (non-act labels need only 1.05x). An unopposed `act` must additionally clear an absolute floor of 0.60. |
-| f | Nothing meaningfully similar (best similarity < 0.35) -> **ask**. |
-
-### How to run it
+## How to Run
 
 ```bash
 python3 -m venv .venv
@@ -166,7 +89,7 @@ Credentials are loaded from `.env` via `python-dotenv`. The LLM is reached with 
 `DefaultAzureCredential`, no Entra ID flow. `AZURE_OPENAI_API_VERSION` is read from `.env`
 rather than hardcoded.
 
-#### Preflight check
+### Preflight check
 
 ```
 make doctor
@@ -192,6 +115,77 @@ tells you everything that is wrong. Each failure prints the actual API error.
 
 This is a dependency check, not an evaluation. The reliability numbers come from
 `make headline`; the last row here only guards against those numbers silently changing.
+
+## Full Reliability Brief (detailed)
+
+Everything below is the deep dive: what was built, the complete evaluation across all five
+configurations, the failing case traced to its cause, a diagnosis that turned out to be wrong
+and how that was discovered, and every number from every run. Nothing here is summarised away.
+
+### What this is, in full
+
+Most devops assistants have one setting: either they ask you before everything, which makes them
+tedious, or they act on everything, which makes them dangerous. Neither matches how people
+actually work, because the same request is routine for one person and alarming for another.
+
+This agent learns where that line sits for each individual. It reads a request from Slack,
+works out what is actually being asked, compares it against what that specific person has
+approved before, and then either does it, holds it for confirmation, or refuses outright. Some
+things it refuses for everyone no matter what they have approved in the past: anything
+destructive that cannot be undone is never delegated.
+
+It works across Slack, GitHub and Linear, and every action it reports is a real API call
+against real data.
+
+
+
+The three nodes are deterministic steps in a fixed sequence, not autonomous agents calling each
+other. Only the extraction step calls a model; the decision step is plain Python, which is what
+makes every outcome auditable.
+
+A Slack-to-devops agent that decides, per person, whether a request should be executed
+immediately, held for confirmation, or refused outright - so it asks when it matters and
+gets out of the way when it does not.
+
+Built with LangGraph and Python against Slack, GitHub, and Linear, with extraction served by
+Azure AI Foundry.
+
+### Short System and Reliability Brief
+
+### What was built, and which 3 apps it uses
+
+**Ask Only When It Matters** is a Slack-to-devops agent that decides, per person, whether a
+request should be executed immediately, held for confirmation, or refused outright.
+
+It is a LangGraph orchestrator over **three deterministic nodes** - not autonomous or
+recursive agents:
+
+1. **Extraction** - a raw Slack message becomes structured JSON via the model's
+   structured-output mode (strict `json_schema`). Fields: `operation` (a closed category of
+   ten), plus seven booleans: `destructive`, `reversible`, `customer_facing`,
+   `evidence_of_resolution`, `urgency`, `new_information_present` and
+   `overrides_prior_decision`. The last two were added in configuration D to capture *why* a
+   request is being made, not just what it does. The model additionally reports any field it
+   could not determine. The extracted JSON is logged alongside every decision made from it.
+2. **Decision** - pure Python, no model call, fixed order of evaluation.
+3. **Action** - executes for real against seeded sandbox data. Every write is followed by a
+   separate read of the same record, and the reported result is built from that verification
+   read rather than from the write's own response; a write that does not verify raises instead
+   of reporting success.
+
+**The three apps are Slack, GitHub, and Linear.** Slack is where requests arrive and where
+every outcome is reported. GitHub issues and Linear tickets are what get acted on.
+
+#### Decision order (fixed, never reordered)
+
+| Step | Rule |
+|------|------|
+| a | **Safety floor.** `destructive AND NOT reversible` -> always refuse. Every user, no exceptions, no learning. Deliberately *not* conditioned on `customer_facing`, so it also catches irreversible-but-internal actions. |
+| b | Extraction confidence low on any field -> **ask**. |
+| c | Similarity-match against *this person's* labeled examples. Operation exact match 0.60; each matching flag 0.06, so up to 0.42 across the seven flags; text similarity 0.10. The per-flag weight is fixed rather than a shared budget, so adding a flag adds discriminating power instead of diluting the existing ones. |
+| d | Votes weighted by similarity, not flat majority. |
+| e | **`act` must win by a real margin.** Act votes take an explicit 0.70 discount, then must beat the runner-up by 1.20x (non-act labels need only 1.05x). An unopposed `act` must additionally clear an absolute floor of 0.60. |
+| f | Nothing meaningfully similar (best similarity < 0.35) -> **ask**. |
 
 ### Evaluation
 
@@ -452,6 +446,100 @@ distinction and the weighting no longer buries it, yet the operation match at 0.
 outweighs the flag evidence that separates those cases. Closing the remaining gap would require
 changing `W_OPERATION` itself, which cannot be done honestly after seeing this result.
 
-### Demo video
+### Repository layout
+
+```
+src/config.py            shared env loading + AzureOpenAI client
+src/nodes/extraction.py  NODE 1 - Slack message -> structured JSON
+src/nodes/decision.py    NODE 2 - deterministic act / ask / refuse
+src/nodes/action.py      NODE 3 - real execution against Slack, GitHub, Linear
+src/clients/             thin real API clients (slack, github, linear)
+src/graph.py             the orchestrator wiring the three nodes (+ HITL variant)
+src/slack_listener.py    polls Slack for human messages and feeds them to the graph
+src/learning.py          records approved/rejected drafts as new labeled examples
+src/humanize.py          plain-English Slack wording (kept out of decision logic)
+src/trace.py             per-action decision trace written to traces.jsonl
+data/labeled_examples.json  26 requests, labeled twice (cautious, trusting)
+data/extracted.json         cached extractions the eval reads
+eval/loo.py                 the eval gate (--config selects the extraction cache)
+data/extracted_headline_config.json  preserved cache behind the headline numbers
+scripts/doctor.py           read-only preflight check of every live dependency
+Makefile                    make doctor / make headline / make eval / make reset
+eval/results_d8d0958.txt    raw gate output for the 23-example headline result
+eval/results_26examples_FAIL.txt  raw gate output for the reopen follow-up
+eval/results_7field_FAIL.txt      raw gate output for the schema-fix attempt
+scripts/                    Step 0 auth verification + seeding + sandbox reset
+```
+
+---
+
+## Known Limitations
+
+Stated plainly, because a reviewer will find these anyway and it is better they read them here.
+
+### Interaction and transport
+
+- **No Slack approve/reject buttons.** A held draft is committed only by running
+  `python -m scripts.confirm <draft-id>`. The Slack message says this outright rather than
+  implying a button exists. Adding buttons needs Socket Mode or a public HTTPS endpoint;
+  polling cannot receive button clicks.
+- **Slack ingestion is polling, not push.** Latency equals the poll interval.
+- **The agent only answers humans.** Any message with a `bot_id` or a `subtype` is discarded.
+  Required to stop it replying to itself, but it will never respond to another app.
+- **Human-in-the-loop state does not survive process exit.** The checkpointer is in-memory and
+  each run gets a fresh `thread_id`, so a suspended graph cannot be resumed by a later command.
+  Use `scripts.confirm` / `scripts.reject`, which work off the persisted drafts file.
+- **`run_agent_hitl.py` writes a duplicate draft on resume.** LangGraph re-executes the node
+  from the top, so one `--approve` run leaves one committed draft and one orphaned
+  `pending_confirmation`. Cosmetic, but it makes `drafts.json` misleading. Prefer
+  `scripts.confirm`; do not demo `run_agent_hitl.py` live.
+- **`.slack_cursor` is gitignored**, so a fresh clone has no cursor and the first poll walks the
+  whole channel backlog. Run `scripts.listen_slack --reset-cursor` on a new machine.
+
+### Action coverage
+
+- **Targets are fixtures-only.** Only GitHub `#1/#2/#3` and Linear `HAC-5/6/7` resolve; anything
+  else raises. Safe, but a typo during a live demo is a crash.
+- **Operation coverage is asymmetric.** GitHub supports close, reopen, comment, assign, relabel,
+  status_check, tell_customer. Linear supports bump_priority, update_status, close, comment,
+  status_check. GitHub has no bump_priority or update_status; Linear has no assign, relabel or
+  reopen. Asking for one of those raises.
+- **Three hardcoded action values.** `relabel` always applies `wontfix`; `assign` always assigns
+  to `GITHUB_OWNER`; `bump_priority` is binary (urgent or low), so "set it to medium" yields low.
+- **This Linear workspace has no "In Review" state**, so `update_status` falls back to In Progress.
+- **No retry or rate-limit handling.** A 5xx mid-demo fails with a stack trace.
+
+### Evaluation and reproducibility
+
+- **`make eval` and `make headline` print different numbers by design.** Headline is the
+  preserved 23-example configuration (88.9% / 77.8%); `make eval` runs the current 26-example
+  configuration (90.9% / 72.7%). Both are real and both appear in the before/after table.
+- **Extraction is non-deterministic across runs.** Re-running `scripts.extract_dataset` can
+  change the numbers. The committed caches protect the reported figures; do not regenerate them
+  casually.
+- **The gate result is FAIL**, and no configuration (A through E) ever passed it.
+- **Only two personas**, hardcoded, sharing one labeled file. No per-user storage.
+- **No unit tests.** The eval and `make doctor` are the only automated checks.
+
+### Live learning
+
+- Corrections are recorded and measurably shift the vote, but **no decision flip was observed
+  within six corrections**. By the sixth, `act` leads `ask` (2.077 vs 2.075) yet the decision
+  stays `ask` because the 1.20x margin is not met. Reproduce with `scripts.correction_curve`.
+- Approved drafts are recorded as `act`, rejected drafts as `refuse`. Recording a rejection as
+  `ask` would teach nothing, so `refuse` is used; that is a judgement call, not a neutral fact.
+- Learned examples are merged in the graph loader only. The eval builds its labeled set from the
+  committed cache, so learning can never reach the evaluation.
+
+### Scope
+
+- The three nodes are **deterministic steps, not autonomous agents**. Only extraction calls a
+  model; the decision node has no model call at all.
+- **LangChain is effectively unused.** `langchain-core` is present only as a LangGraph
+  dependency. The accurate claim is LangGraph.
+- In live runs the top neighbour can score above 1.0 because the person's own labeled history
+  includes that exact message. Correct behaviour, but it looks like a bug without explanation.
+
+## Demo Video
 
 **[TO BE ADDED - link pending recording]**
