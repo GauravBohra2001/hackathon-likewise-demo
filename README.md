@@ -80,7 +80,8 @@ data/labeled_examples.json  26 requests, labeled twice (cautious, trusting)
 data/extracted.json         cached extractions the eval reads
 eval/loo.py                 the eval gate (--config selects the extraction cache)
 data/extracted_headline_config.json  preserved cache behind the headline numbers
-Makefile                    make headline / make eval / make reset
+scripts/doctor.py           read-only preflight check of every live dependency
+Makefile                    make doctor / make headline / make eval / make reset
 eval/results_d8d0958.txt    raw gate output for the 23-example headline result
 eval/results_26examples_FAIL.txt  raw gate output for the reopen follow-up
 eval/results_7field_FAIL.txt      raw gate output for the schema-fix attempt
@@ -133,6 +134,7 @@ python3 -m venv .venv
 ./.venv/bin/python -m pip install python-dotenv requests openai langgraph
 
 cp .env.example .env        # then fill in real values
+make doctor                 # read-only: verifies all three APIs, fixtures and the eval
 ./.venv/bin/python -m scripts.step0_slack          # verify Slack auth, send a test message
 ./.venv/bin/python -m scripts.step0_github         # verify GitHub auth, seed 3 issues
 ./.venv/bin/python -m scripts.step0_linear_seed    # verify Linear auth, seed 3 tickets
@@ -163,6 +165,33 @@ Credentials are loaded from `.env` via `python-dotenv`. The LLM is reached with 
 `openai` package using `AzureOpenAI`, authenticated with an **API key only** - no
 `DefaultAzureCredential`, no Entra ID flow. `AZURE_OPENAI_API_VERSION` is read from `.env`
 rather than hardcoded.
+
+#### Preflight check
+
+```
+make doctor
+```
+
+Confirms in one command that every live dependency actually works before you rely on it:
+
+| Check | What it proves |
+|---|---|
+| environment variables | all 11 required keys present and non-empty in `.env` |
+| Slack token | `auth.test` succeeds; reports the workspace and bot id |
+| Slack channel readable | `conversations.history` works, so the listener can ingest messages |
+| GitHub repo | the repo resolves and has issues enabled |
+| Linear team | `LINEAR_TEST_TEAM_ID` matches a team the key can see |
+| seeded fixtures | all six seeded targets (`#1/#2/#3`, `HAC-5/6/7`) still exist |
+| Azure OpenAI | a real completion returns, so extraction will work |
+| eval reproduces headline | `eval.loo` still prints 78.3 / 88.9 / 77.8 and `GATE: FAIL` |
+
+It is **read-only**: it never posts to Slack, never writes to GitHub or Linear, and never
+touches the drafts, traces or learned-examples files. Exit code is 0 when healthy and 1 when
+anything fails, and it runs every check rather than stopping at the first failure, so one run
+tells you everything that is wrong. Each failure prints the actual API error.
+
+This is a dependency check, not an evaluation. The reliability numbers come from
+`make headline`; the last row here only guards against those numbers silently changing.
 
 ### Evaluation
 
