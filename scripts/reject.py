@@ -8,7 +8,8 @@ draft_id = sys.argv[1]
 note = sys.argv[2] if len(sys.argv) > 2 else ""
 d = reject_draft(draft_id, note)
 sl.post(f"*Cancelled.* Someone declined this, so nothing was changed."
-        f"{(' Reason given: ' + note) if note else ''}")
+        f"{(' Reason given: ' + note) if note else ''}",
+        thread_ts=d.get("slack_thread_ts"))
 print(f"draft  : {d['id']}")
 print(f"status : {d['status']}  committed={d['committed']}")
 print(f"RESULT : nothing executed against any app")

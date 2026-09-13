@@ -53,3 +53,11 @@ def comment(issue_id, body_text):
         success comment { id url }
       }
     }""", {"issueId": issue_id, "body": body_text})
+
+
+def get_issue_with_comments(identifier):
+    """Fresh read including comment count, used to verify a write landed."""
+    body = gql(f"""query($id: String!) {{
+      issue(id: $id) {{ {ISSUE_FIELDS} comments {{ nodes {{ id }} }} }}
+    }}""", {"id": identifier})
+    return body["data"]["issue"]

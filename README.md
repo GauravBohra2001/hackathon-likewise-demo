@@ -141,8 +141,15 @@ make headline                                      # reproduce the brief's headl
 ./.venv/bin/python -m scripts.listen_slack --once           # one poll
 ./.venv/bin/python -m scripts.listen_slack --interval 10    # poll continuously
 
-# human-in-the-loop: 'ask' suspends the graph until approved or rejected
-./.venv/bin/python -m scripts.run_agent_hitl "close #1 - we shipped the fix" --persona cautious
+# approve or reject a held draft (the supported CLI path, works across commands)
+./.venv/bin/python -m scripts.confirm draft-abc12345
+./.venv/bin/python -m scripts.reject  draft-abc12345 "not yet, waiting on QA"
+
+# demonstrates LangGraph pause/resume WITHIN ONE PROCESS only. The checkpointer is
+# in-memory and each run gets a new thread_id, so a suspended graph cannot be
+# resumed by a later command; pass --approve in the same invocation. Known issue:
+# resuming re-runs the node, so one --approve run leaves a duplicate orphaned draft
+# in drafts.json. Prefer scripts.confirm above.
 ./.venv/bin/python -m scripts.run_agent_hitl "close #1 - we shipped the fix" --persona cautious --approve
 ./.venv/bin/python -m scripts.reset_sandbox     # restore seeded data to its Step 0 state
 ```

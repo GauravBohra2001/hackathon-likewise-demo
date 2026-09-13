@@ -1,9 +1,23 @@
-"""CLI: run a message through the human-in-the-loop graph.
+"""CLI: demonstrate LangGraph pause/resume WITHIN A SINGLE PROCESS.
 
-On 'ask' the graph SUSPENDS. Approve or reject to resume it.
-  --approve   resume with approval (commits the draft)
-  --reject    resume with rejection (nothing is executed)
-  neither     leave it suspended and print the pending interrupt
+On 'ask' the graph suspends at an interrupt(). Passing --approve or --reject in the
+SAME invocation resumes it and shows the outcome.
+
+IMPORTANT: state is held by an in-memory checkpointer and a fresh thread_id is
+generated on every run, so a suspended graph CANNOT be resumed by a later command.
+Running this without a flag shows the suspended state and then exits; that run is
+gone. To approve a held draft from the CLI, use scripts.confirm (or scripts.reject),
+which work off the persisted drafts file and are the supported path.
+
+  --approve   resume this run with approval (commits the draft)
+  --reject    resume this run with rejection (nothing is executed)
+  neither     show the suspended state and exit; the draft remains in drafts.json
+
+KNOWN ISSUE: when the graph resumes, LangGraph re-executes this node from the top,
+so write_draft() runs a second time and a single --approve run leaves TWO drafts in
+drafts.json - one committed, one orphaned as pending_confirmation. This is cosmetic
+(the orphan is never executed) but it makes drafts.json misleading. scripts.confirm
+does not have this problem and is the recommended path.
 """
 import argparse
 import json
@@ -50,7 +64,10 @@ print(f"\ncheckpoint next node : {state.next}")
 print(f"pending interrupts   : {len(state.tasks[0].interrupts) if state.tasks else 0}")
 
 if not (a.approve or a.reject):
-    print("\nLeft suspended. Re-run with --approve or --reject to resume.")
+    print("\nThis process is exiting, so this suspended graph cannot be resumed later.")
+    print(f"The draft was still written. Approve it with:")
+    print(f"  ./.venv/bin/python -m scripts.confirm {payload['draft_id']}")
+    print(f"  ./.venv/bin/python -m scripts.reject  {payload['draft_id']}")
     raise SystemExit(0)
 
 print("\n" + "-" * 90)
