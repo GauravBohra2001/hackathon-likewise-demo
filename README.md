@@ -14,6 +14,7 @@ src/config.py            shared env loading + AzureOpenAI client
 src/nodes/extraction.py  NODE 1 - Slack message -> structured JSON
 src/nodes/decision.py    NODE 2 - deterministic act / ask / refuse
 src/nodes/action.py      NODE 3 - real execution against Slack, GitHub, Linear
+src/clients/             thin real API clients (slack, github, linear)
 src/graph.py             the orchestrator wiring the three nodes
 data/labeled_examples.json  23 requests, labeled twice (cautious, trusting)
 data/extracted.json         cached extractions the eval reads
