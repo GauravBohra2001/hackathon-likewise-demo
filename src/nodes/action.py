@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from src.clients import github_client as gh
 from src.clients import linear_client as ln
 from src.clients import slack_client as sl
+from src import humanize
 from src.config import fixtures, require
 
 DRAFTS_PATH = "drafts.json"
@@ -162,7 +163,9 @@ def confirm_draft(draft_id):
     d["committed_at"] = datetime.now(timezone.utc).isoformat()
     d["result"] = summary
     _save_drafts(drafts)
-    sl.post(f"[CONFIRMED] Draft `{draft_id}` approved and committed: {summary}")
+    name, _, _ = humanize.describe_target(d["target"])
+    sl.post(f"*Approved and done.* Someone confirmed this, so I went ahead with {name}.\n"
+            f"Result: {summary}")
     return d, summary, raw
 
 
@@ -181,10 +184,7 @@ def act_node(state):
 
     if label == "refuse":
         out["summary"] = "REFUSED - nothing executed against any app."
-        out["slack"] = sl.post(
-            f"*[REFUSED]* {message}\n"
-            f"> {decision['reason']}\n"
-            f"> Nothing was executed in GitHub or Linear.", thread_ts=thread_ts)
+        out["slack"] = sl.post(humanize.refuse_message(op, target, decision), thread_ts=thread_ts)
         return out
 
     if label == "ask":
@@ -192,20 +192,14 @@ def act_node(state):
         out["draft"] = draft
         out["summary"] = (f"HELD as draft `{draft['id']}` - written, NOT committed. "
                           f"Confirm separately to commit.")
-        tgt = (target or {}).get("identifier") or f"#{(target or {}).get('number', '?')}"
         out["slack"] = sl.post(
-            f"*[ASKING FIRST]* {message}\n"
-            f"> {decision['reason']}\n"
-            f"> Proposed: `{op}` on *{tgt}*. Draft `{draft['id']}` written but NOT committed.",
-            thread_ts=thread_ts)
+            humanize.ask_message(op, target, draft["id"], decision), thread_ts=thread_ts)
         return out
 
     summary, raw = execute(op, target, extraction, message, persona)
     out.update({"committed": True, "summary": summary, "raw": raw})
     out["slack"] = sl.post(
-        f"*[DONE]* {message}\n"
-        f"> {decision['reason']}\n"
-        f"> Executed: {summary}", thread_ts=thread_ts)
+        humanize.act_message(op, target, summary, decision), thread_ts=thread_ts)
     return out
 
 
@@ -246,11 +240,8 @@ def act_node_hitl(state):
     target = resolve_target(state["extraction_result"]["target"], message)
     op = extraction["operation"]
     draft = write_draft(op, target, extraction, message, persona, decision["reason"])
-    tgt = (target or {}).get("identifier") or f"#{(target or {}).get('number', '?')}"
 
-    sl.post(f"*[ASKING FIRST]* {message}\n"
-            f"> {decision['reason']}\n"
-            f"> Proposed: `{op}` on *{tgt}*. Draft `{draft['id']}` held, awaiting approval.")
+    sl.post(humanize.ask_message(op, target, draft["id"], decision))
 
     # The graph suspends HERE. State is persisted by the checkpointer; nothing is executed.
     answer = interrupt({
@@ -269,8 +260,8 @@ def act_node_hitl(state):
 
     if not approved:
         d = reject_draft(draft["id"], note)
-        slack = sl.post(f"*[REJECTED]* Draft `{draft['id']}` was not approved. "
-                        f"Nothing executed.{(' Note: ' + note) if note else ''}")
+        slack = sl.post(f"*Cancelled.* Someone declined this, so nothing was changed."
+                        f"{(' Reason given: ' + note) if note else ''}")
         return {"label": "ask", "committed": False, "draft": d,
                 "summary": f"REJECTED - draft {draft['id']} not committed, nothing executed.",
                 "raw": None, "slack": slack}

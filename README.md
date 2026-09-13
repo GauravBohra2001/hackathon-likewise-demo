@@ -1,5 +1,43 @@
 # Ask Only When It Matters
 
+## What this is
+
+Most devops assistants have one setting: either they ask you before everything, which makes them
+tedious, or they act on everything, which makes them dangerous. Neither matches how people
+actually work, because the same request is routine for one person and alarming for another.
+
+This agent learns where that line sits for each individual. It reads a request from Slack,
+works out what is actually being asked, compares it against what that specific person has
+approved before, and then either does it, holds it for confirmation, or refuses outright. Some
+things it refuses for everyone no matter what they have approved in the past: anything
+destructive that cannot be undone is never delegated.
+
+It works across Slack, GitHub and Linear, and every action it reports is a real API call
+against real data.
+
+```mermaid
+flowchart LR
+    S["Slack message<br/>from a human"] --> E
+
+    subgraph Orchestrator["LangGraph orchestrator"]
+        direction LR
+        E["<b>1. Extraction</b><br/>LLM, structured output<br/>what is being asked?"]
+        D["<b>2. Decision</b><br/>deterministic, no LLM<br/>act / ask / refuse"]
+        A["<b>3. Action</b><br/>real API calls"]
+        E --> D --> A
+    end
+
+    D -.->|"destructive and<br/>irreversible"| R["Refuse<br/>nothing runs"]
+    A --> G["GitHub<br/>close, reopen, comment"]
+    A --> L["Linear<br/>priority, status, comment"]
+    A --> T["Slack reply<br/>in thread"]
+    A --> J["traces.jsonl<br/>full decision record"]
+```
+
+The three nodes are deterministic steps in a fixed sequence, not autonomous agents calling each
+other. Only the extraction step calls a model; the decision step is plain Python, which is what
+makes every outcome auditable.
+
 ## Quick verify
 
 ```
@@ -113,6 +151,13 @@ Credentials are loaded from `.env` via `python-dotenv`. The LLM is reached with 
 rather than hardcoded.
 
 ### Evaluation
+
+> **Note on the two eval commands.** `make headline` reproduces the numbers reported in this
+> section, which come from a 23-example, 5-field configuration preserved for exactly that
+> purpose. `make eval` runs the gate against the *current* 26-example, 7-field configuration and
+> prints **different numbers** (cautious 90.9%, trusting 72.7%). Both are real and both are
+> reported below in the before/after table. If the two disagree, that is expected, not a
+> discrepancy to reconcile.
 
 Leave-one-out cross-validation over 23 labeled Slack-style requests, each labeled twice - once
 as a **cautious** persona, once as a **trusting** persona. 9 of the 23 are genuine
