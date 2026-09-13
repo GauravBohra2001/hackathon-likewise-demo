@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from src.clients import github_client as gh
 from src.clients import linear_client as ln
 from src.clients import slack_client as sl
-from src import humanize
+from src import humanize, learning
 from src.config import fixtures, require
 
 DRAFTS_PATH = "drafts.json"
@@ -163,6 +163,9 @@ def confirm_draft(draft_id):
     d["committed_at"] = datetime.now(timezone.utc).isoformat()
     d["result"] = summary
     _save_drafts(drafts)
+    learned = learning.record_outcome(d, approved=True)
+    print(f"[learning         ] recorded approval as a '{learned['label']}' example "
+          f"for persona '{learned['persona']}'")
     name, _, _ = humanize.describe_target(d["target"])
     sl.post(f"*Approved and done.* Someone confirmed this, so I went ahead with {name}.\n"
             f"Result: {summary}")
@@ -214,6 +217,9 @@ def reject_draft(draft_id, note=""):
     d["rejected_at"] = datetime.now(timezone.utc).isoformat()
     d["rejection_note"] = note
     _save_drafts(drafts)
+    learned = learning.record_outcome(d, approved=False, note=note)
+    print(f"[learning         ] recorded rejection as a '{learned['label']}' example "
+          f"for persona '{learned['persona']}'")
     return d
 
 

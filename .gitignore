@@ -5,3 +5,4 @@ __pycache__/
 drafts.json
 traces.jsonl
 .slack_cursor
+learned_examples.json

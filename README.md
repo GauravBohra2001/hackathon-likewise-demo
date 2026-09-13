@@ -73,6 +73,8 @@ src/nodes/action.py      NODE 3 - real execution against Slack, GitHub, Linear
 src/clients/             thin real API clients (slack, github, linear)
 src/graph.py             the orchestrator wiring the three nodes (+ HITL variant)
 src/slack_listener.py    polls Slack for human messages and feeds them to the graph
+src/learning.py          records approved/rejected drafts as new labeled examples
+src/humanize.py          plain-English Slack wording (kept out of decision logic)
 src/trace.py             per-action decision trace written to traces.jsonl
 data/labeled_examples.json  26 requests, labeled twice (cautious, trusting)
 data/extracted.json         cached extractions the eval reads

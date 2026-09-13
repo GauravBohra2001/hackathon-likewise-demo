@@ -9,7 +9,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from src import trace
+from src import learning, trace
 from src.nodes.action import act_node
 from src.nodes.decision import decide
 from src.nodes.extraction import extract
@@ -48,7 +48,9 @@ def action_node(state: AgentState) -> AgentState:
     a = act_node(state)
     print(f"[NODE 3 action    ] committed={a['committed']} :: {a['summary']}")
     rec = trace.write(trace.build(state["extraction_result"], state["decision"], a, state["persona"]))
-    print("[TRACE            ] appended to " + trace.TRACE_PATH)
+    print()
+    print(trace.render(rec))
+    print(f"(full machine-readable record appended to {trace.TRACE_PATH})")
     return {"action": a, "trace": rec}
 
 
@@ -65,9 +67,19 @@ def build_graph():
 
 
 def load_labeled(persona):
+    """Base labeled set PLUS anything this person taught by approving or rejecting drafts.
+
+    The evaluation harness deliberately does not use this function; it builds its labeled
+    set straight from the committed cache, so learned examples never affect the eval.
+    """
     rows = json.load(open("data/extracted.json"))
-    return [{"text": r["text"], "extraction": r["extraction"], "label": r[persona]}
+    base = [{"text": r["text"], "extraction": r["extraction"], "label": r[persona]}
             for r in rows]
+    learned = learning.load_learned(persona)
+    if learned:
+        print(f"[learning         ] {len(learned)} learned example(s) for persona "
+              f"'{persona}' in play alongside {len(base)} baseline examples")
+    return base + learned
 
 
 def run(message, persona, slack_thread_ts=None):
@@ -82,7 +94,9 @@ def action_node_hitl(state: AgentState) -> AgentState:
     a = act_node_hitl(state)
     print(f"[NODE 3 action    ] committed={a['committed']} :: {a['summary']}")
     rec = trace.write(trace.build(state["extraction_result"], state["decision"], a, state["persona"]))
-    print("[TRACE            ] appended to " + trace.TRACE_PATH)
+    print()
+    print(trace.render(rec))
+    print(f"(full machine-readable record appended to {trace.TRACE_PATH})")
     return {"action": a, "trace": rec}
 
 
