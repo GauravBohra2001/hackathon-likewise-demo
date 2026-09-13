@@ -15,7 +15,7 @@ read afterward.
 
 **[Quick Verify](#quick-verify)** | **[How to Run](#how-to-run)** | **[Full Reliability Brief](#full-reliability-brief-detailed)** | **[Known Limitations](#known-limitations)**
 
-**[Watch the 2-minute demo](https://youtu.be/OgSxeVfc4gc)**
+**[Watch the 2-minute demo](https://youtu.be/OgSxeVfc4gc)** - https://youtu.be/OgSxeVfc4gc
 
 ---
 

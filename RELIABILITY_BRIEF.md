@@ -1,6 +1,6 @@
 # Short System and Reliability Brief
 
-**[Watch the 2-minute demo](https://youtu.be/OgSxeVfc4gc)**
+**[Watch the 2-minute demo](https://youtu.be/OgSxeVfc4gc)** - https://youtu.be/OgSxeVfc4gc
 
 ## What was built, and which 3 apps it uses
 
