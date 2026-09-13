@@ -309,4 +309,6 @@ changing `W_OPERATION` itself, which cannot be done honestly after seeing this r
 
 ## Demo video
 
-**[TO BE ADDED - link pending recording]**
+**[Watch the 2-minute demo](https://youtu.be/OgSxeVfc4gc)**
+
+https://youtu.be/OgSxeVfc4gc

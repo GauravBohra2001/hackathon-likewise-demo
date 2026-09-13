@@ -551,4 +551,6 @@ scripts/                    Step 0 auth verification + seeding + sandbox reset
 
 ## Demo Video
 
-**[TO BE ADDED - link pending recording]**
+**[Watch the 2-minute demo](https://youtu.be/OgSxeVfc4gc)**
+
+https://youtu.be/OgSxeVfc4gc
