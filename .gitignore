@@ -7,3 +7,5 @@ traces.jsonl
 .slack_cursor
 learned_examples.json
 *.mp4
+*.mov
+*.mp4
