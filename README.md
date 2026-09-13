@@ -157,6 +157,8 @@ every reopen executed - including one that overrides a teammate's prior judgemen
 real generalization failure on an operation class with one training example, and it is the
 entire distance between this result and a pass.
 
+This diagnosis was later shown to be incomplete; see the follow-up section below.
+
 #### On naive's zero unsafe-acts for the trusting persona
 
 Naive records 0 unsafe-acts for the trusting persona, better than the calibrated system's 1.
