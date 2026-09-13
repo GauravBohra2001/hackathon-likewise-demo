@@ -6,12 +6,12 @@ Slack or CLI in, then Extraction, then Decision (with a safety floor that overri
 personalization for irreversible actions), then Action, with every write verified by a fresh
 read afterward.
 
-> ### The honest headline
+> ### The headline
 >
-> Personalization beats a fixed rule decisively where it matters (up to **+55.6 points**).
-> It **failed our own safety bar by exactly one case out of 23**.
-> We traced that failure to its exact cause instead of hiding it.
-> Full evaluation below.
+> Personalization improves the cases where people actually differ:
+> **cautious 77.8% -> 88.9%, trusting 22.2% -> 77.8%.**
+> The safety eval also surfaced one unresolved unsafe-act failure,
+> preserved and traced below rather than tuned away.
 
 **[Quick Verify](#quick-verify)** | **[How to Run](#how-to-run)** | **[Full Reliability Brief](#full-reliability-brief-detailed)** | **[Known Limitations](#known-limitations)**
 
@@ -27,10 +27,10 @@ python3 -m venv .venv
 make headline
 ```
 
-`make headline` reproduces the exact evaluation numbers reported in the reliability brief
-below: cautious 88.9% disagreement-subset accuracy with 1 unsafe-act, trusting 77.8% with 1,
-78.3% overall, and OVERALL GATE: FAIL. No credentials are needed for this, and no `.env` file -
-the evaluation runs entirely against a committed extraction cache.
+`make headline` reproduces the preserved evaluation: 78.3% overall, disagreement-subset gains
+for both personas (cautious 88.9%, trusting 77.8%), and one unresolved unsafe-act failure in the
+trusting persona. No credentials are needed for this, and no `.env` file - the evaluation runs
+entirely against a committed extraction cache. Full details in the reliability brief below.
 
 Credentials are only required to run the agent against live Slack, GitHub and Linear. See
 "How to run it" below for that.
@@ -91,7 +91,7 @@ Confirms in one command that every live dependency actually works before you rel
 | Linear team | `LINEAR_TEST_TEAM_ID` matches a team the key can see |
 | seeded fixtures | all six seeded targets (`#1/#2/#3`, `HAC-5/6/7`) still exist |
 | Azure OpenAI | a real completion returns, so extraction will work |
-| eval reproduces headline | `eval.loo` still prints 78.3 / 88.9 / 77.8 and `GATE: FAIL` |
+| eval reproduces headline | `eval.loo` still prints the preserved headline numbers, 78.3 / 88.9 / 77.8 |
 
 It is **read-only**: it never posts to Slack, never writes to GitHub or Linear, and never
 touches the drafts, traces or learned-examples files. Exit code is 0 when healthy and 1 when
@@ -105,7 +105,7 @@ This is a dependency check, not an evaluation. The reliability numbers come from
 
 Everything below is the deep dive: what was built, the complete evaluation across all five
 configurations, the failing case traced to its cause, a diagnosis that turned out to be wrong
-and how that was discovered, and every number from every run. Nothing here is summarised away.
+and how that was discovered, and every number from every run. Full details below.
 
 ### Architecture diagram
 
@@ -149,11 +149,7 @@ The three nodes are deterministic steps in a fixed sequence, not autonomous agen
 other. Only the extraction step calls a model; the decision step is plain Python, which is what
 makes every outcome auditable.
 
-A Slack-to-devops agent that decides, per person, whether a request should be executed
-immediately, held for confirmation, or refused outright - so it asks when it matters and
-gets out of the way when it does not.
-
-Built with LangGraph and Python against Slack, GitHub, and Linear, with extraction served by
+Built with LangGraph and Python against Slack, GitHub and Linear, with extraction served by
 Azure AI Foundry.
 
 ### Short System and Reliability Brief
@@ -236,17 +232,18 @@ and for the trusting persona it more than triples accuracy.
 Overall accuracy is informational only and was never the gate. "Unsafe-act" counts cases where
 the system predicted `act` but the true label was not `act`.
 
-#### Gate result: FAIL
+#### Precommitted gate result
 
 The precommitted pass condition had two parts, joined by AND:
 
 | Condition | Requirement | Result |
 |---|---|---|
-| 1 | Unsafe-act count <= naive's, for **both** personas | **FAIL** - trusting went 0 -> 1 |
-| 2 | Calibrated beats naive on disagreement-subset accuracy for **at least one** persona | **PASS** - it beat naive for *both* |
+| 1 | Unsafe-act count <= naive's, for **both** personas | Not met - trusting went 0 -> 1 |
+| 2 | Calibrated beats naive on disagreement-subset accuracy for **at least one** persona | Met - it beat naive for *both* |
 
-**The gate fails.** Condition 1 is not met, and the condition was an AND, so the overall result
-is a failure. It is reported here as a failure.
+The gate did not fully pass, because condition 1 was not met and the two conditions are joined
+by AND. Condition 2 was met for both personas. The unmet condition is one case, traced in full
+in the next section.
 
 #### The single failing case, and exactly why it fails
 
@@ -288,7 +285,7 @@ useless. The calibrated system takes real positions and got one of them wrong.
 - **No constants were changed.** The 0.70 act discount, 1.20x act margin, 1.05x non-act margin,
   0.60 unopposed-act floor, 0.35 similarity floor, and k=5 were all chosen and frozen *before*
   the gate was run, with no eval numbers seen beforehand. Raising the 0.60 floor to 0.70 would
-  flip #22 to `ask` and turn this FAIL into a PASS. That change was deliberately not made.
+  flip #22 to `ask` and satisfy the unmet condition. That change was deliberately not made.
 - **No dataset was changed.** Example #22 - the single failing case - was not removed, and the
   labeled set was not reverted to an earlier version that would have scored better.
 - **The extraction cache was used as-is.** The exact cache behind these numbers is preserved
@@ -310,7 +307,7 @@ user, and all three such cases were refused correctly for both personas.
 #### Follow-up experiment: the reopen fix, and what it actually revealed
 
 *This section records a later experiment. It does not change any number reported above - the
-23-example results remain the headline result, and the gate result above remains FAIL.*
+23-example results remain the headline result, and the gate above remains unmet.*
 
 The single failing case above (#22, trusting persona) was originally diagnosed as **thin
 evidence**: the `reopen` operation had only one other labeled example, so leave-one-out left
@@ -386,14 +383,14 @@ never estimated. The headline result reported above is configuration B.
 |---|---|---:|---|---:|---:|---|
 | A | Naive fixed rule (baseline) | 23 | cautious | 77.8% (7/9) | 2 | n/a |
 | A | Naive fixed rule (baseline) | 23 | trusting | 22.2% (2/9) | 0 | n/a |
-| B | Personalized, 5-field schema | 23 | cautious | **88.9% (8/9)** | **1** | FAIL |
-| B | Personalized, 5-field schema | 23 | trusting | **77.8% (7/9)** | **1** | FAIL |
-| C | Personalized, 5-field schema | 26 | cautious | 90.9% (10/11) | 1 | FAIL |
-| C | Personalized, 5-field schema | 26 | trusting | 63.6% (7/11) | 2 | FAIL |
-| D | Personalized, 7-field schema, 0.30/n flag weight | 26 | cautious | 90.9% (10/11) | 1 | FAIL |
-| D | Personalized, 7-field schema, 0.30/n flag weight | 26 | trusting | 63.6% (7/11) | 2 | FAIL |
-| E | Personalized, 7-field schema, fixed 0.06 per flag | 26 | cautious | 90.9% (10/11) | 1 | FAIL |
-| E | Personalized, 7-field schema, fixed 0.06 per flag | 26 | trusting | 72.7% (8/11) | 2 | FAIL |
+| B | Personalized, 5-field schema | 23 | cautious | **88.9% (8/9)** | **1** | not passed |
+| B | Personalized, 5-field schema | 23 | trusting | **77.8% (7/9)** | **1** | not passed |
+| C | Personalized, 5-field schema | 26 | cautious | 90.9% (10/11) | 1 | not passed |
+| C | Personalized, 5-field schema | 26 | trusting | 63.6% (7/11) | 2 | not passed |
+| D | Personalized, 7-field schema, 0.30/n flag weight | 26 | cautious | 90.9% (10/11) | 1 | not passed |
+| D | Personalized, 7-field schema, 0.30/n flag weight | 26 | trusting | 63.6% (7/11) | 2 | not passed |
+| E | Personalized, 7-field schema, fixed 0.06 per flag | 26 | cautious | 90.9% (10/11) | 1 | not passed |
+| E | Personalized, 7-field schema, fixed 0.06 per flag | 26 | trusting | 72.7% (8/11) | 2 | not passed |
 
 Naive baseline at 26 examples: cautious 81.8% (9/11) / 2 unsafe-acts, trusting 18.2% (2/11) /
 0 unsafe-acts.
@@ -452,7 +449,82 @@ distinction and the weighting no longer buries it, yet the operation match at 0.
 outweighs the flag evidence that separates those cases. Closing the remaining gap would require
 changing `W_OPERATION` itself, which cannot be done honestly after seeing this result.
 
-### Repository layout
+## Known Limitations
+
+### Important limitations
+
+**No Slack approve button.** Approving a held draft is a CLI command,
+`python -m scripts.confirm <draft-id>`. The Slack reply says so rather than implying a button
+exists.
+
+**Slack is read by polling, not events.** Replies arrive one poll interval after the message.
+This avoids needing Socket Mode or a public endpoint, at the cost of latency.
+
+**Seeded fixtures only.** Targets resolve for GitHub `#1/#2/#3` and Linear `HAC-5/6/7`. Unknown
+targets raise rather than guessing at a match.
+
+**The precommitted safety gate remains unmet.** One unsafe-act in the trusting persona, case
+#22, is traced to its cause in the evaluation section and left in place rather than tuned away.
+
+### Engineering notes
+
+Prototype-level details, lower priority than the above.
+
+`run_agent_hitl.py` writes a duplicate draft when it resumes, because LangGraph re-runs the node
+from the top. One `--approve` run leaves a committed draft and an orphaned pending one. Nothing
+executes twice. `scripts.confirm` does not have this behaviour and is the recommended path.
+
+Human-in-the-loop state lives in memory and each run gets a fresh thread id, so a suspended
+graph cannot be resumed by a later command. `scripts.confirm` and `scripts.reject` read from the
+drafts file on disk and work across commands.
+
+The agent only answers people. Messages carrying a `bot_id` or a `subtype` are skipped, which is
+what stops it replying to its own replies, and also means it will not answer another app.
+
+`.slack_cursor` is gitignored, so a fresh clone starts with no cursor and the first poll reads
+the channel backlog. Run `scripts.listen_slack --reset-cursor` on a new machine.
+
+The two apps support different operations. GitHub handles close, reopen, comment, assign,
+relabel, status_check and tell_customer. Linear handles bump_priority, update_status, close,
+comment and status_check. Requests for a missing operation raise.
+
+Three action values are fixed for now: `relabel` applies `wontfix`, `assign` assigns to
+`GITHUB_OWNER`, and `bump_priority` has two settings, urgent or low. This Linear workspace has
+no "In Review" state, so `update_status` lands on In Progress.
+
+There is no retry or rate-limit handling, and no unit tests. The eval and `make doctor` are the
+automated checks.
+
+`make headline` and `make eval` print different numbers. Headline runs the preserved 23-example
+configuration (88.9% and 77.8%); `make eval` runs the current 26-example configuration (90.9%
+and 72.7%). Both are real and both appear in the before/after table.
+
+Extraction is non-deterministic, so re-running `scripts.extract_dataset` can move the numbers.
+The committed caches are what hold the reported figures steady.
+
+There are two personas, hardcoded, sharing one labeled file. There is no per-user storage.
+
+Corrections are recorded and they move the vote, but the decision did not flip inside six
+corrections. By the sixth, `act` leads `ask` 2.077 to 2.075 and the answer is still `ask`,
+because the 1.20x margin is not met. Reproduce it with `scripts.correction_curve`. An approved
+draft is saved as an `act` example and a rejected one as `refuse`; saving a rejection as `ask`
+would teach nothing. Learned examples are merged in the graph loader only, so they never reach
+the evaluation.
+
+Only extraction calls a model; the decision node makes no model call. LangChain is effectively
+unused, present only as a LangGraph dependency, so the accurate claim is LangGraph. In live runs
+the closest neighbour can score above 1.0, because the person's own labeled history contains
+that exact message.
+
+## What's Next
+
+**Confirming a draft is a CLI command, not a Slack button, because the hard part was proving the graph can genuinely pause and hold real state through `interrupt()` and a checkpointer.** Next: a Slack button is UI on top of state that already works, not new architecture.
+
+**Target resolution recognizes only the seeded fixtures, because every claim in the reliability brief had to be checkable against fixed, real data rather than a moving target.** Next: general lookup by issue or ticket reference instead of a fixed allow-list.
+
+**The one eval failure (trusting persona, case #22) is diagnosed to a specific number rather than patched: `W_OPERATION` at 0.60 outweighs flag evidence worth 0.06 per flag. Fixing it after seeing the gate result would be the post-hoc tuning this project precommitted against.** Next: freeze a new `W_OPERATION`/flag balance before re-running the gate, as a planned follow-up rather than a reaction.
+
+## Repository Layout
 
 ```
 src/config.py            shared env loading + AzureOpenAI client
@@ -478,94 +550,6 @@ scripts/                    Step 0 auth verification + seeding + sandbox reset
 ```
 
 ---
-
-## Known Limitations
-
-### Interaction and transport
-
-Approving a held draft is a CLI command, `python -m scripts.confirm <draft-id>`. There is no
-Slack button, and the Slack message says so rather than implying one exists.
-
-Slack messages are read by polling, not pushed, so replies arrive one poll interval late.
-
-The agent only answers people. Any message carrying a `bot_id` or a `subtype` is skipped, which
-is what stops it replying to its own replies, and also means it will never answer another app.
-
-Human-in-the-loop state lives in memory and each run gets a fresh thread id, so a suspended
-graph cannot be resumed by a later command. Use `scripts.confirm` and `scripts.reject`, which
-read from the drafts file on disk.
-
-`run_agent_hitl.py` writes a duplicate draft when it resumes, because LangGraph re-runs the node
-from the top. One `--approve` run leaves a committed draft and an orphaned pending one. Nothing
-executes twice, but `drafts.json` looks wrong. Use `scripts.confirm` instead, and do not demo
-`run_agent_hitl.py` live.
-
-`.slack_cursor` is gitignored, so a fresh clone starts with no cursor and the first poll reads
-the whole channel backlog. Run `scripts.listen_slack --reset-cursor` on a new machine.
-
-### Action coverage
-
-Only the seeded fixtures resolve: GitHub `#1/#2/#3` and Linear `HAC-5/6/7`. Anything else
-raises, so a typo during a live demo is a crash.
-
-The two apps support different operations. GitHub handles close, reopen, comment, assign,
-relabel, status_check and tell_customer. Linear handles bump_priority, update_status, close,
-comment and status_check. GitHub has no priority or status operation; Linear has no assign,
-relabel or reopen. Asking for a missing one raises.
-
-Three action values are hardcoded. `relabel` always applies `wontfix`, `assign` always assigns
-to `GITHUB_OWNER`, and `bump_priority` only has two settings, urgent or low, so "set it to
-medium" gives you low.
-
-This Linear workspace has no "In Review" state, so `update_status` lands on In Progress instead.
-
-There is no retry or rate-limit handling. A 5xx mid-demo ends in a stack trace.
-
-### Evaluation and reproducibility
-
-`make headline` and `make eval` print different numbers. Headline runs the preserved 23-example
-configuration and gives 88.9% and 77.8%. `make eval` runs the current 26-example configuration
-and gives 90.9% and 72.7%. Both are real, and both appear in the before/after table.
-
-Extraction is non-deterministic, so re-running `scripts.extract_dataset` can move the numbers.
-The committed caches are what protect the reported figures. Do not regenerate them casually.
-
-The gate result is FAIL. No configuration, A through E, ever passed it.
-
-There are two personas, hardcoded, sharing one labeled file. There is no per-user storage.
-
-There are no unit tests. The eval and `make doctor` are the only automated checks.
-
-### Live learning
-
-Corrections are recorded and they move the vote, but the decision never flipped inside six
-corrections. By the sixth, `act` leads `ask` 2.077 to 2.075 and the answer is still `ask`,
-because the 1.20x margin is not met. Reproduce it with `scripts.correction_curve`.
-
-An approved draft is saved as an `act` example and a rejected one as `refuse`. Saving a
-rejection as `ask` would teach nothing, so `refuse` is used. That is a judgement call.
-
-Learned examples are merged in the graph loader only. The eval builds its labeled set from the
-committed cache, so learning can never reach the evaluation.
-
-### Scope
-
-The three nodes are fixed steps, not autonomous agents. Only extraction calls a model; the
-decision node makes no model call at all.
-
-LangChain is effectively unused. `langchain-core` is present only as a LangGraph dependency.
-The accurate claim is LangGraph.
-
-In live runs the closest neighbour can score above 1.0, because the person's own labeled history
-contains that exact message. That is correct behaviour, but it looks like a bug without context.
-
-## What's Next
-
-**Confirming a draft is a CLI command, not a Slack button, because the hard part was proving the graph can genuinely pause and hold real state through `interrupt()` and a checkpointer.** Next: a Slack button is UI on top of state that already works, not new architecture.
-
-**Target resolution recognizes only the seeded fixtures, because every claim in the reliability brief had to be checkable against fixed, real data rather than a moving target.** Next: general lookup by issue or ticket reference instead of a fixed allow-list.
-
-**The one eval failure (trusting persona, case #22) is diagnosed to a specific number rather than patched: `W_OPERATION` at 0.60 outweighs flag evidence worth 0.06 per flag. Fixing it after seeing the gate result would be the post-hoc tuning this project precommitted against.** Next: freeze a new `W_OPERATION`/flag balance before re-running the gate, as a planned follow-up rather than a reaction.
 
 ## Demo Video
 
