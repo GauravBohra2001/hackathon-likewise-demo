@@ -9,6 +9,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from src import trace
 from src.nodes.action import act_node
 from src.nodes.decision import decide
 from src.nodes.extraction import extract
@@ -21,6 +22,7 @@ class AgentState(TypedDict, total=False):
     extraction_result: dict
     decision: dict
     action: dict
+    trace: dict
 
 
 def extraction_node(state: AgentState) -> AgentState:
@@ -44,7 +46,9 @@ def decision_node(state: AgentState) -> AgentState:
 def action_node(state: AgentState) -> AgentState:
     a = act_node(state)
     print(f"[NODE 3 action    ] committed={a['committed']} :: {a['summary']}")
-    return {"action": a}
+    rec = trace.write(trace.build(state["extraction_result"], state["decision"], a, state["persona"]))
+    print("[TRACE            ] appended to " + trace.TRACE_PATH)
+    return {"action": a, "trace": rec}
 
 
 def build_graph():
@@ -75,7 +79,9 @@ def action_node_hitl(state: AgentState) -> AgentState:
     from src.nodes.action import act_node_hitl
     a = act_node_hitl(state)
     print(f"[NODE 3 action    ] committed={a['committed']} :: {a['summary']}")
-    return {"action": a}
+    rec = trace.write(trace.build(state["extraction_result"], state["decision"], a, state["persona"]))
+    print("[TRACE            ] appended to " + trace.TRACE_PATH)
+    return {"action": a, "trace": rec}
 
 
 def build_graph_hitl():

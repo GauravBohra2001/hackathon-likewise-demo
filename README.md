@@ -16,11 +16,13 @@ src/nodes/decision.py    NODE 2 - deterministic act / ask / refuse
 src/nodes/action.py      NODE 3 - real execution against Slack, GitHub, Linear
 src/clients/             thin real API clients (slack, github, linear)
 src/graph.py             the orchestrator wiring the three nodes (+ HITL variant)
+src/trace.py             per-action decision trace written to traces.jsonl
 data/labeled_examples.json  26 requests, labeled twice (cautious, trusting)
 data/extracted.json         cached extractions the eval reads
 eval/loo.py                 the eval gate
 eval/results_d8d0958.txt    raw gate output for the 23-example headline result
 eval/results_26examples_FAIL.txt  raw gate output for the reopen follow-up
+eval/results_7field_FAIL.txt      raw gate output for the schema-fix attempt
 scripts/                    Step 0 auth verification + seeding + sandbox reset
 ```
 
@@ -248,6 +250,48 @@ Both would join the flag group in the similarity function, giving the decision n
 separate the two `reopen` clusters that are currently identical to it. This is a concrete,
 specified change with a clear mechanism, not an open-ended limitation - and it was identified
 precisely because the follow-up experiment failed in an informative way.
+
+#### Before/after: every eval run, real numbers only
+
+Three configurations were evaluated. All numbers below are read from committed raw output,
+never estimated. The headline result reported above is configuration B.
+
+| # | Configuration | Examples | Persona | Disagreement-subset accuracy | Unsafe-act | Gate |
+|---|---|---:|---|---:|---:|---|
+| A | Naive fixed rule (baseline) | 23 | cautious | 77.8% (7/9) | 2 | n/a |
+| A | Naive fixed rule (baseline) | 23 | trusting | 22.2% (2/9) | 0 | n/a |
+| B | Personalized, 5-field schema | 23 | cautious | **88.9% (8/9)** | **1** | FAIL |
+| B | Personalized, 5-field schema | 23 | trusting | **77.8% (7/9)** | **1** | FAIL |
+| C | Personalized, 5-field schema | 26 | cautious | 90.9% (10/11) | 1 | FAIL |
+| C | Personalized, 5-field schema | 26 | trusting | 63.6% (7/11) | 2 | FAIL |
+| D | Personalized, 7-field schema | 26 | cautious | 90.9% (10/11) | 1 | FAIL |
+| D | Personalized, 7-field schema | 26 | trusting | 63.6% (7/11) | 2 | FAIL |
+
+Naive baseline at 26 examples: cautious 81.8% (9/11) / 2 unsafe-acts, trusting 18.2% (2/11) /
+0 unsafe-acts.
+
+Note on B, trusting: unsafe-act is 1 here and 2 in C and D. The three `reopen` examples added
+for C introduced one further unsafe-act; C and D were never better than B on this metric.
+
+Raw output for each configuration:
+
+- B: `eval/results_d8d0958.txt`
+- C: `eval/results_26examples_FAIL.txt`
+- D: `eval/results_7field_FAIL.txt`
+
+**What changed between C and D, and what did not.** Configuration D added the two extraction
+fields identified above as the fix: `new_information_present` and `overrides_prior_decision`.
+The model extracts both correctly, and they separate the `reopen` cluster exactly along the
+label boundary - the three trusting-`act` reopens all carry `new_information_present: true`,
+and the two trusting-`ask` reopens carry `false`. **The decision numbers are nevertheless
+identical to C.** The reason is weighting, not extraction: the flag budget of 0.30 now spreads
+across seven flags at 0.0429 each, so the distinguishing difference between two `reopen`
+examples is worth 0.0857 against an operation match worth 0.60 - a signal roughly 7x too small
+to overcome what it must outweigh. Correcting that requires re-weighting `W_OPERATION` and
+`W_FLAGS` after having seen the gate result, which is the post-hoc tuning this project
+precommitted against, so it was not done. The identified fix is therefore now two changes, not
+one: the schema fields (done, and demonstrably working at the extraction layer) and a
+similarity re-weighting that must be chosen and frozen before the next evaluation.
 
 ### Demo video
 
