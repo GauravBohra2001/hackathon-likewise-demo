@@ -44,10 +44,14 @@ def text_similarity(a, b):
 def similarity(query_ex, query_text, cand_ex, cand_text):
     """Weighted similarity. Operation match is the largest single contributor."""
     op = 1.0 if query_ex["operation"] == cand_ex["operation"] else 0.0
-    matching_flags = sum(1 for f in FLAGS if query_ex[f] == cand_ex[f])
+    # Compare only flags present in BOTH extractions, so a 5-field historical cache and the
+    # current 7-field schema each score against their own flag set instead of crashing.
+    shared = [f for f in FLAGS if f in query_ex and f in cand_ex]
+    matching_flags = sum(1 for f in shared if query_ex[f] == cand_ex[f])
     txt = text_similarity(query_text, cand_text)
-    score = W_OPERATION * op + W_FLAGS * (matching_flags / len(FLAGS)) + W_TEXT * txt
-    return score, {"operation_match": bool(op), "matching_flags": matching_flags, "text_sim": round(txt, 3)}
+    score = W_OPERATION * op + W_FLAGS * (matching_flags / len(shared)) + W_TEXT * txt
+    return score, {"operation_match": bool(op), "matching_flags": matching_flags,
+                   "flags_compared": len(shared), "text_sim": round(txt, 3)}
 
 
 def decide(extraction_result, labeled, persona):

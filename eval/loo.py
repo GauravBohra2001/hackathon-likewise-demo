@@ -6,13 +6,20 @@ Naive fixed rule (not personalized, identical for both personas):
     close / reopen                       -> ask
     otherwise                            -> act
 """
+import argparse
 import json
 import subprocess
 
 from src.nodes.decision import (ACT_ABS_FLOOR, ACT_DISCOUNT, ACT_MARGIN,
                                 NEIGHBOR_FLOOR, TIE_MARGIN, TOP_K, decide)
 
-ROWS = json.load(open("data/extracted.json"))
+# --config points the gate at a specific extraction cache. The headline numbers in the brief
+# come from data/extracted_headline_config.json, preserved so they reproduce without a checkout.
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--config", default="data/extracted.json")
+_ARGS, _ = _ap.parse_known_args()
+CACHE = _ARGS.config
+ROWS = json.load(open(CACHE))
 PERSONAS = ("cautious", "trusting")
 URGENT_WORDS = ("urgent", "asap", "blocked", "immediately", "customer", "p1", "escalate")
 
@@ -54,7 +61,8 @@ print("EVAL GATE - leave-one-out cross-validation")
 print("=" * 96)
 print(f"examples            : {len(ROWS)}")
 print(f"disagreement subset : {len(DISAGREE)} cases -> {DISAGREE}")
-print(f"extraction cache    : data/extracted.json @ commit {head} (used as-is, not regenerated)")
+print(f"extraction cache    : {CACHE} (used as-is, not regenerated)")
+print(f"repo commit         : {head}")
 print(f"frozen constants    : act_discount={ACT_DISCOUNT} act_margin={ACT_MARGIN}x "
       f"tie_margin={TIE_MARGIN}x abs_floor={ACT_ABS_FLOOR} floor={NEIGHBOR_FLOOR} k={TOP_K}")
 print()

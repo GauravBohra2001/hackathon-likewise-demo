@@ -19,7 +19,9 @@ src/graph.py             the orchestrator wiring the three nodes (+ HITL variant
 src/trace.py             per-action decision trace written to traces.jsonl
 data/labeled_examples.json  26 requests, labeled twice (cautious, trusting)
 data/extracted.json         cached extractions the eval reads
-eval/loo.py                 the eval gate
+eval/loo.py                 the eval gate (--config selects the extraction cache)
+data/extracted_headline_config.json  preserved cache behind the headline numbers
+Makefile                    make headline / make eval / make reset
 eval/results_d8d0958.txt    raw gate output for the 23-example headline result
 eval/results_26examples_FAIL.txt  raw gate output for the reopen follow-up
 eval/results_7field_FAIL.txt      raw gate output for the schema-fix attempt
@@ -71,7 +73,8 @@ cp .env.example .env        # then fill in real values
 ./.venv/bin/python -m scripts.step0_github         # verify GitHub auth, seed 3 issues
 ./.venv/bin/python -m scripts.step0_linear_seed    # verify Linear auth, seed 3 tickets
 ./.venv/bin/python -m scripts.extract_dataset      # run extraction over the labeled set
-./.venv/bin/python -m eval.loo                     # the eval gate
+make headline                                      # reproduce the brief's headline numbers exactly
+./.venv/bin/python -m eval.loo                     # the gate against the current cache
 ./.venv/bin/python -m scripts.run_agent "close #2, it's a dupe of #1" --persona trusting
 
 # human-in-the-loop: 'ask' suspends the graph until approved or rejected
@@ -176,9 +179,10 @@ useless. The calibrated system takes real positions and got one of them wrong.
   flip #22 to `ask` and turn this FAIL into a PASS. That change was deliberately not made.
 - **No dataset was changed.** Example #22 - the single failing case - was not removed, and the
   labeled set was not reverted to an earlier version that would have scored better.
-- **The extraction cache was used as-is.** The eval reads `data/extracted.json` committed at
-  `d8d0958`. Extraction is non-deterministic across runs; the cache is committed so the reported
-  numbers are checkable rather than merely asserted.
+- **The extraction cache was used as-is.** The exact cache behind these numbers is preserved
+  at `data/extracted_headline_config.json`. Extraction is non-deterministic across runs, so the
+  cache is committed to make the reported numbers checkable rather than merely asserted. Run
+  `make headline` to reproduce every number in this section from a clean clone.
 - The raw, unedited terminal output of the gate is committed verbatim at
   `eval/results_d8d0958.txt`.
 

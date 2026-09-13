@@ -141,9 +141,10 @@ useless. The calibrated system takes real positions and got one of them wrong.
   flip #22 to `ask` and turn this FAIL into a PASS. That change was deliberately not made.
 - **No dataset was changed.** Example #22 - the single failing case - was not removed, and the
   labeled set was not reverted to an earlier version that would have scored better.
-- **The extraction cache was used as-is.** The eval reads `data/extracted.json` committed at
-  `d8d0958`. Extraction is non-deterministic across runs; the cache is committed so the reported
-  numbers are checkable rather than merely asserted.
+- **The extraction cache was used as-is.** The exact cache behind these numbers is preserved
+  at `data/extracted_headline_config.json`. Extraction is non-deterministic across runs, so the
+  cache is committed to make the reported numbers checkable rather than merely asserted. Run
+  `make headline` to reproduce every number in this section from a clean clone.
 - The raw, unedited terminal output of the gate is committed verbatim at
   `eval/results_d8d0958.txt`.
 
