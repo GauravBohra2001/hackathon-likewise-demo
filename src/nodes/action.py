@@ -205,3 +205,74 @@ def act_node(state):
         f"> {decision['reason']}\n"
         f"> Executed: {summary}")
     return out
+
+
+# ---------------------------------------------------------------- human-in-the-loop
+def reject_draft(draft_id, note=""):
+    """Mark a held draft as rejected. Nothing is executed."""
+    drafts = _load_drafts()
+    if draft_id not in drafts:
+        raise RuntimeError(f"No such draft {draft_id!r}")
+    d = drafts[draft_id]
+    d["status"] = "rejected"
+    d["rejected_at"] = datetime.now(timezone.utc).isoformat()
+    d["rejection_note"] = note
+    _save_drafts(drafts)
+    return d
+
+
+def act_node_hitl(state):
+    """Action node that PAUSES the graph on 'ask' via LangGraph interrupt().
+
+    refuse -> executes nothing, returns immediately
+    act    -> commits immediately
+    ask    -> writes a draft, reports to Slack, then interrupt()s. The graph stays
+              suspended in the checkpointer until a Command(resume=...) arrives.
+              Approval commits the draft; rejection leaves it uncommitted.
+    """
+    from langgraph.types import interrupt
+
+    decision = state["decision"]
+    extraction = state["extraction_result"]["extraction"]
+    message = state["extraction_result"]["message"]
+    persona = state["persona"]
+    label = decision["label"]
+
+    if label != "ask":
+        return act_node(state)
+
+    target = resolve_target(state["extraction_result"]["target"], message)
+    op = extraction["operation"]
+    draft = write_draft(op, target, extraction, message, persona, decision["reason"])
+    tgt = (target or {}).get("identifier") or f"#{(target or {}).get('number', '?')}"
+
+    sl.post(f":raised_hand: *Asking first* — {message}\n"
+            f"> {decision['reason']}\n"
+            f"> Proposed: `{op}` on *{tgt}*. Draft `{draft['id']}` held, awaiting approval.")
+
+    # The graph suspends HERE. State is persisted by the checkpointer; nothing is executed.
+    answer = interrupt({
+        "kind": "approval_required",
+        "draft_id": draft["id"],
+        "persona": persona,
+        "message": message,
+        "proposed_operation": op,
+        "target": tgt,
+        "reason": decision["reason"],
+        "extraction": extraction,
+    })
+
+    approved = bool(answer.get("approved")) if isinstance(answer, dict) else bool(answer)
+    note = answer.get("note", "") if isinstance(answer, dict) else ""
+
+    if not approved:
+        d = reject_draft(draft["id"], note)
+        slack = sl.post(f":x: *Rejected* — draft `{draft['id']}` was not approved. "
+                        f"Nothing executed.{(' Note: ' + note) if note else ''}")
+        return {"label": "ask", "committed": False, "draft": d,
+                "summary": f"REJECTED — draft {draft['id']} not committed, nothing executed.",
+                "raw": None, "slack": slack}
+
+    d, summary, raw = confirm_draft(draft["id"])
+    return {"label": "ask", "committed": True, "draft": d,
+            "summary": f"APPROVED — {summary}", "raw": raw, "slack": None}

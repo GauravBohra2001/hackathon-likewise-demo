@@ -15,7 +15,7 @@ src/nodes/extraction.py  NODE 1 - Slack message -> structured JSON
 src/nodes/decision.py    NODE 2 - deterministic act / ask / refuse
 src/nodes/action.py      NODE 3 - real execution against Slack, GitHub, Linear
 src/clients/             thin real API clients (slack, github, linear)
-src/graph.py             the orchestrator wiring the three nodes
+src/graph.py             the orchestrator wiring the three nodes (+ HITL variant)
 data/labeled_examples.json  26 requests, labeled twice (cautious, trusting)
 data/extracted.json         cached extractions the eval reads
 eval/loo.py                 the eval gate
@@ -71,6 +71,11 @@ cp .env.example .env        # then fill in real values
 ./.venv/bin/python -m scripts.extract_dataset      # run extraction over the labeled set
 ./.venv/bin/python -m eval.loo                     # the eval gate
 ./.venv/bin/python -m scripts.run_agent "close #2, it's a dupe of #1" --persona trusting
+
+# human-in-the-loop: 'ask' suspends the graph until approved or rejected
+./.venv/bin/python -m scripts.run_agent_hitl "close #1 - we shipped the fix" --persona cautious
+./.venv/bin/python -m scripts.run_agent_hitl "close #1 - we shipped the fix" --persona cautious --approve
+./.venv/bin/python -m scripts.reset_sandbox     # restore seeded data to its Step 0 state
 ```
 
 Credentials are loaded from `.env` via `python-dotenv`. The LLM is reached with the standard

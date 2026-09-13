@@ -68,3 +68,26 @@ def load_labeled(persona):
 def run(message, persona):
     return build_graph().invoke(
         {"message": message, "persona": persona, "labeled": load_labeled(persona)})
+
+
+# ---------------------------------------------------------------- human-in-the-loop graph
+def action_node_hitl(state: AgentState) -> AgentState:
+    from src.nodes.action import act_node_hitl
+    a = act_node_hitl(state)
+    print(f"[NODE 3 action    ] committed={a['committed']} :: {a['summary']}")
+    return {"action": a}
+
+
+def build_graph_hitl():
+    """Same three nodes, but 'ask' suspends the graph until a human resumes it."""
+    from langgraph.checkpoint.memory import MemorySaver
+
+    g = StateGraph(AgentState)
+    g.add_node("extraction", extraction_node)
+    g.add_node("decision", decision_node)
+    g.add_node("action", action_node_hitl)
+    g.add_edge(START, "extraction")
+    g.add_edge("extraction", "decision")
+    g.add_edge("decision", "action")
+    g.add_edge("action", END)
+    return g.compile(checkpointer=MemorySaver())
