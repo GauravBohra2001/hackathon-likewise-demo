@@ -2,24 +2,9 @@
 
 A Slack-to-devops agent that learns, per person, when to just do the thing and when to stop and ask.
 
-```mermaid
-flowchart LR
-    S["Slack message<br/>from a human"] --> E
-
-    subgraph Orchestrator["LangGraph orchestrator"]
-        direction LR
-        E["<b>1. Extraction</b><br/>LLM, structured output<br/>what is being asked?"]
-        D["<b>2. Decision</b><br/>deterministic, no LLM<br/>act / ask / refuse"]
-        A["<b>3. Action</b><br/>real API calls"]
-        E --> D --> A
-    end
-
-    D -.->|"destructive and<br/>irreversible"| R["Refuse<br/>nothing runs"]
-    A --> G["GitHub<br/>close, reopen, comment"]
-    A --> L["Linear<br/>priority, status, comment"]
-    A --> T["Slack reply<br/>in thread"]
-    A --> J["traces.jsonl<br/>full decision record"]
-```
+Slack or CLI in, then Extraction, then Decision (with a safety floor that overrides
+personalization for irreversible actions), then Action, with every write verified by a fresh
+read afterward.
 
 > ### The honest headline
 >
@@ -121,6 +106,27 @@ This is a dependency check, not an evaluation. The reliability numbers come from
 Everything below is the deep dive: what was built, the complete evaluation across all five
 configurations, the failing case traced to its cause, a diagnosis that turned out to be wrong
 and how that was discovered, and every number from every run. Nothing here is summarised away.
+
+### Architecture diagram
+
+```mermaid
+flowchart LR
+    S["Slack message<br/>from a human"] --> E
+
+    subgraph Orchestrator["LangGraph orchestrator"]
+        direction LR
+        E["<b>1. Extraction</b><br/>LLM, structured output<br/>what is being asked?"]
+        D["<b>2. Decision</b><br/>deterministic, no LLM<br/>act / ask / refuse"]
+        A["<b>3. Action</b><br/>real API calls"]
+        E --> D --> A
+    end
+
+    D -.->|"destructive and<br/>irreversible"| R["Refuse<br/>nothing runs"]
+    A --> G["GitHub<br/>close, reopen, comment"]
+    A --> L["Linear<br/>priority, status, comment"]
+    A --> T["Slack reply<br/>in thread"]
+    A --> J["traces.jsonl<br/>full decision record"]
+```
 
 ### What this is, in full
 
@@ -475,70 +481,91 @@ scripts/                    Step 0 auth verification + seeding + sandbox reset
 
 ## Known Limitations
 
-Stated plainly, because a reviewer will find these anyway and it is better they read them here.
-
 ### Interaction and transport
 
-- **No Slack approve/reject buttons.** A held draft is committed only by running
-  `python -m scripts.confirm <draft-id>`. The Slack message says this outright rather than
-  implying a button exists. Adding buttons needs Socket Mode or a public HTTPS endpoint;
-  polling cannot receive button clicks.
-- **Slack ingestion is polling, not push.** Latency equals the poll interval.
-- **The agent only answers humans.** Any message with a `bot_id` or a `subtype` is discarded.
-  Required to stop it replying to itself, but it will never respond to another app.
-- **Human-in-the-loop state does not survive process exit.** The checkpointer is in-memory and
-  each run gets a fresh `thread_id`, so a suspended graph cannot be resumed by a later command.
-  Use `scripts.confirm` / `scripts.reject`, which work off the persisted drafts file.
-- **`run_agent_hitl.py` writes a duplicate draft on resume.** LangGraph re-executes the node
-  from the top, so one `--approve` run leaves one committed draft and one orphaned
-  `pending_confirmation`. Cosmetic, but it makes `drafts.json` misleading. Prefer
-  `scripts.confirm`; do not demo `run_agent_hitl.py` live.
-- **`.slack_cursor` is gitignored**, so a fresh clone has no cursor and the first poll walks the
-  whole channel backlog. Run `scripts.listen_slack --reset-cursor` on a new machine.
+Approving a held draft is a CLI command, `python -m scripts.confirm <draft-id>`. There is no
+Slack button, and the Slack message says so rather than implying one exists.
+
+Slack messages are read by polling, not pushed, so replies arrive one poll interval late.
+
+The agent only answers people. Any message carrying a `bot_id` or a `subtype` is skipped, which
+is what stops it replying to its own replies, and also means it will never answer another app.
+
+Human-in-the-loop state lives in memory and each run gets a fresh thread id, so a suspended
+graph cannot be resumed by a later command. Use `scripts.confirm` and `scripts.reject`, which
+read from the drafts file on disk.
+
+`run_agent_hitl.py` writes a duplicate draft when it resumes, because LangGraph re-runs the node
+from the top. One `--approve` run leaves a committed draft and an orphaned pending one. Nothing
+executes twice, but `drafts.json` looks wrong. Use `scripts.confirm` instead, and do not demo
+`run_agent_hitl.py` live.
+
+`.slack_cursor` is gitignored, so a fresh clone starts with no cursor and the first poll reads
+the whole channel backlog. Run `scripts.listen_slack --reset-cursor` on a new machine.
 
 ### Action coverage
 
-- **Targets are fixtures-only.** Only GitHub `#1/#2/#3` and Linear `HAC-5/6/7` resolve; anything
-  else raises. Safe, but a typo during a live demo is a crash.
-- **Operation coverage is asymmetric.** GitHub supports close, reopen, comment, assign, relabel,
-  status_check, tell_customer. Linear supports bump_priority, update_status, close, comment,
-  status_check. GitHub has no bump_priority or update_status; Linear has no assign, relabel or
-  reopen. Asking for one of those raises.
-- **Three hardcoded action values.** `relabel` always applies `wontfix`; `assign` always assigns
-  to `GITHUB_OWNER`; `bump_priority` is binary (urgent or low), so "set it to medium" yields low.
-- **This Linear workspace has no "In Review" state**, so `update_status` falls back to In Progress.
-- **No retry or rate-limit handling.** A 5xx mid-demo fails with a stack trace.
+Only the seeded fixtures resolve: GitHub `#1/#2/#3` and Linear `HAC-5/6/7`. Anything else
+raises, so a typo during a live demo is a crash.
+
+The two apps support different operations. GitHub handles close, reopen, comment, assign,
+relabel, status_check and tell_customer. Linear handles bump_priority, update_status, close,
+comment and status_check. GitHub has no priority or status operation; Linear has no assign,
+relabel or reopen. Asking for a missing one raises.
+
+Three action values are hardcoded. `relabel` always applies `wontfix`, `assign` always assigns
+to `GITHUB_OWNER`, and `bump_priority` only has two settings, urgent or low, so "set it to
+medium" gives you low.
+
+This Linear workspace has no "In Review" state, so `update_status` lands on In Progress instead.
+
+There is no retry or rate-limit handling. A 5xx mid-demo ends in a stack trace.
 
 ### Evaluation and reproducibility
 
-- **`make eval` and `make headline` print different numbers by design.** Headline is the
-  preserved 23-example configuration (88.9% / 77.8%); `make eval` runs the current 26-example
-  configuration (90.9% / 72.7%). Both are real and both appear in the before/after table.
-- **Extraction is non-deterministic across runs.** Re-running `scripts.extract_dataset` can
-  change the numbers. The committed caches protect the reported figures; do not regenerate them
-  casually.
-- **The gate result is FAIL**, and no configuration (A through E) ever passed it.
-- **Only two personas**, hardcoded, sharing one labeled file. No per-user storage.
-- **No unit tests.** The eval and `make doctor` are the only automated checks.
+`make headline` and `make eval` print different numbers. Headline runs the preserved 23-example
+configuration and gives 88.9% and 77.8%. `make eval` runs the current 26-example configuration
+and gives 90.9% and 72.7%. Both are real, and both appear in the before/after table.
+
+Extraction is non-deterministic, so re-running `scripts.extract_dataset` can move the numbers.
+The committed caches are what protect the reported figures. Do not regenerate them casually.
+
+The gate result is FAIL. No configuration, A through E, ever passed it.
+
+There are two personas, hardcoded, sharing one labeled file. There is no per-user storage.
+
+There are no unit tests. The eval and `make doctor` are the only automated checks.
 
 ### Live learning
 
-- Corrections are recorded and measurably shift the vote, but **no decision flip was observed
-  within six corrections**. By the sixth, `act` leads `ask` (2.077 vs 2.075) yet the decision
-  stays `ask` because the 1.20x margin is not met. Reproduce with `scripts.correction_curve`.
-- Approved drafts are recorded as `act`, rejected drafts as `refuse`. Recording a rejection as
-  `ask` would teach nothing, so `refuse` is used; that is a judgement call, not a neutral fact.
-- Learned examples are merged in the graph loader only. The eval builds its labeled set from the
-  committed cache, so learning can never reach the evaluation.
+Corrections are recorded and they move the vote, but the decision never flipped inside six
+corrections. By the sixth, `act` leads `ask` 2.077 to 2.075 and the answer is still `ask`,
+because the 1.20x margin is not met. Reproduce it with `scripts.correction_curve`.
+
+An approved draft is saved as an `act` example and a rejected one as `refuse`. Saving a
+rejection as `ask` would teach nothing, so `refuse` is used. That is a judgement call.
+
+Learned examples are merged in the graph loader only. The eval builds its labeled set from the
+committed cache, so learning can never reach the evaluation.
 
 ### Scope
 
-- The three nodes are **deterministic steps, not autonomous agents**. Only extraction calls a
-  model; the decision node has no model call at all.
-- **LangChain is effectively unused.** `langchain-core` is present only as a LangGraph
-  dependency. The accurate claim is LangGraph.
-- In live runs the top neighbour can score above 1.0 because the person's own labeled history
-  includes that exact message. Correct behaviour, but it looks like a bug without explanation.
+The three nodes are fixed steps, not autonomous agents. Only extraction calls a model; the
+decision node makes no model call at all.
+
+LangChain is effectively unused. `langchain-core` is present only as a LangGraph dependency.
+The accurate claim is LangGraph.
+
+In live runs the closest neighbour can score above 1.0, because the person's own labeled history
+contains that exact message. That is correct behaviour, but it looks like a bug without context.
+
+## What's Next
+
+**Confirming a draft is a CLI command, not a Slack button, because the hard part was proving the graph can genuinely pause and hold real state through `interrupt()` and a checkpointer.** Next: a Slack button is UI on top of state that already works, not new architecture.
+
+**Target resolution recognizes only the seeded fixtures, because every claim in the reliability brief had to be checkable against fixed, real data rather than a moving target.** Next: general lookup by issue or ticket reference instead of a fixed allow-list.
+
+**The one eval failure (trusting persona, case #22) is diagnosed to a specific number rather than patched: `W_OPERATION` at 0.60 outweighs flag evidence worth 0.06 per flag. Fixing it after seeing the gate result would be the post-hoc tuning this project precommitted against.** Next: freeze a new `W_OPERATION`/flag balance before re-running the gate, as a planned follow-up rather than a reaction.
 
 ## Demo Video
 
