@@ -1,5 +1,7 @@
 # Short System and Reliability Brief
 
+**[Watch the 2-minute demo](https://youtu.be/OgSxeVfc4gc)**
+
 ## What was built, and which 3 apps it uses
 
 **Ask Only When It Matters** is a Slack-to-devops agent that decides, per person, whether a
