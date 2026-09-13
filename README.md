@@ -34,6 +34,7 @@ src/nodes/decision.py    NODE 2 - deterministic act / ask / refuse
 src/nodes/action.py      NODE 3 - real execution against Slack, GitHub, Linear
 src/clients/             thin real API clients (slack, github, linear)
 src/graph.py             the orchestrator wiring the three nodes (+ HITL variant)
+src/slack_listener.py    polls Slack for human messages and feeds them to the graph
 src/trace.py             per-action decision trace written to traces.jsonl
 data/labeled_examples.json  26 requests, labeled twice (cautious, trusting)
 data/extracted.json         cached extractions the eval reads
@@ -94,6 +95,11 @@ cp .env.example .env        # then fill in real values
 make headline                                      # reproduce the brief's headline numbers exactly
 ./.venv/bin/python -m eval.loo                     # the gate against the current cache
 ./.venv/bin/python -m scripts.run_agent "close #2, it's a dupe of #1" --persona trusting
+
+# read real messages from Slack and act on them (requires channels:history)
+./.venv/bin/python -m scripts.listen_slack --reset-cursor   # ignore channel backlog
+./.venv/bin/python -m scripts.listen_slack --once           # one poll
+./.venv/bin/python -m scripts.listen_slack --interval 10    # poll continuously
 
 # human-in-the-loop: 'ask' suspends the graph until approved or rejected
 ./.venv/bin/python -m scripts.run_agent_hitl "close #1 - we shipped the fix" --persona cautious

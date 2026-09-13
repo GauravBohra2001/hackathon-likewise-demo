@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 drafts.json
 traces.jsonl
+.slack_cursor

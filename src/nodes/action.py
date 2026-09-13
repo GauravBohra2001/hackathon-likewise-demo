@@ -173,6 +173,7 @@ def act_node(state):
     message = state["extraction_result"]["message"]
     persona = state["persona"]
     label = decision["label"]
+    thread_ts = state.get("slack_thread_ts")
     target = resolve_target(state["extraction_result"]["target"], message)
     op = extraction["operation"]
     out = {"label": label, "committed": False, "draft": None,
@@ -183,7 +184,7 @@ def act_node(state):
         out["slack"] = sl.post(
             f"*[REFUSED]* {message}\n"
             f"> {decision['reason']}\n"
-            f"> Nothing was executed in GitHub or Linear.")
+            f"> Nothing was executed in GitHub or Linear.", thread_ts=thread_ts)
         return out
 
     if label == "ask":
@@ -195,7 +196,8 @@ def act_node(state):
         out["slack"] = sl.post(
             f"*[ASKING FIRST]* {message}\n"
             f"> {decision['reason']}\n"
-            f"> Proposed: `{op}` on *{tgt}*. Draft `{draft['id']}` written but NOT committed.")
+            f"> Proposed: `{op}` on *{tgt}*. Draft `{draft['id']}` written but NOT committed.",
+            thread_ts=thread_ts)
         return out
 
     summary, raw = execute(op, target, extraction, message, persona)
@@ -203,7 +205,7 @@ def act_node(state):
     out["slack"] = sl.post(
         f"*[DONE]* {message}\n"
         f"> {decision['reason']}\n"
-        f"> Executed: {summary}")
+        f"> Executed: {summary}", thread_ts=thread_ts)
     return out
 
 

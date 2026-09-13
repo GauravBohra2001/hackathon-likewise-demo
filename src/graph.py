@@ -23,6 +23,7 @@ class AgentState(TypedDict, total=False):
     decision: dict
     action: dict
     trace: dict
+    slack_thread_ts: str
 
 
 def extraction_node(state: AgentState) -> AgentState:
@@ -69,9 +70,10 @@ def load_labeled(persona):
             for r in rows]
 
 
-def run(message, persona):
+def run(message, persona, slack_thread_ts=None):
     return build_graph().invoke(
-        {"message": message, "persona": persona, "labeled": load_labeled(persona)})
+        {"message": message, "persona": persona, "labeled": load_labeled(persona),
+         "slack_thread_ts": slack_thread_ts})
 
 
 # ---------------------------------------------------------------- human-in-the-loop graph

@@ -1,0 +1,5 @@
+{
+  "_note": "Maps a Slack user id to the persona whose labeled history the agent personalizes against. Unmapped users fall back to 'default'.",
+  "default": "cautious",
+  "users": {}
+}
