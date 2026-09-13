@@ -101,11 +101,16 @@ recursive agents:
 
 1. **Extraction** - a raw Slack message becomes structured JSON via the model's
    structured-output mode (strict `json_schema`). Fields: `operation` (a closed category of
-   ten), plus `destructive`, `reversible`, `customer_facing`, `evidence_of_resolution`,
-   `urgency`. The model additionally reports any field it could not determine. The extracted
-   JSON is logged alongside every decision made from it.
+   ten), plus seven booleans: `destructive`, `reversible`, `customer_facing`,
+   `evidence_of_resolution`, `urgency`, `new_information_present` and
+   `overrides_prior_decision`. The last two were added in configuration D to capture *why* a
+   request is being made, not just what it does. The model additionally reports any field it
+   could not determine. The extracted JSON is logged alongside every decision made from it.
 2. **Decision** - pure Python, no model call, fixed order of evaluation.
-3. **Action** - executes for real against seeded sandbox data.
+3. **Action** - executes for real against seeded sandbox data. Every write is followed by a
+   separate read of the same record, and the reported result is built from that verification
+   read rather than from the write's own response; a write that does not verify raises instead
+   of reporting success.
 
 **The three apps are Slack, GitHub, and Linear.** Slack is where requests arrive and where
 every outcome is reported. GitHub issues and Linear tickets are what get acted on.
@@ -116,7 +121,7 @@ every outcome is reported. GitHub issues and Linear tickets are what get acted o
 |------|------|
 | a | **Safety floor.** `destructive AND NOT reversible` -> always refuse. Every user, no exceptions, no learning. Deliberately *not* conditioned on `customer_facing`, so it also catches irreversible-but-internal actions. |
 | b | Extraction confidence low on any field -> **ask**. |
-| c | Similarity-match against *this person's* labeled examples. Operation exact match carries the largest weight (0.60); matching `destructive`/`reversible`/`customer_facing`/`urgency`/`evidence_of_resolution` flags next (0.30); text similarity smallest (0.10). |
+| c | Similarity-match against *this person's* labeled examples. Operation exact match 0.60; each matching flag 0.06, so up to 0.42 across the seven flags; text similarity 0.10. The per-flag weight is fixed rather than a shared budget, so adding a flag adds discriminating power instead of diluting the existing ones. |
 | d | Votes weighted by similarity, not flat majority. |
 | e | **`act` must win by a real margin.** Act votes take an explicit 0.70 discount, then must beat the runner-up by 1.20x (non-act labels need only 1.05x). An unopposed `act` must additionally clear an absolute floor of 0.60. |
 | f | Nothing meaningfully similar (best similarity < 0.35) -> **ask**. |
@@ -324,16 +329,24 @@ More data could never have fixed this. The gap was never thin evidence; it was a
 feature dimension**. Additional `reopen` rows only supplied more mutually indistinguishable
 neighbours.
 
-**Identified next improvement.** Add two fields to the extraction schema in
-`src/nodes/extraction.py`, extracted from the message the same way the existing flags are:
+**Identified next improvement, and what was since done about it.** The fix identified here was
+to add two fields to the extraction schema capturing *why* a request is being made:
 
-- **`requester_uncertain`** - the requester signals their own doubt ("maybe", "I'm not totally sure", "I think"). This is distinct from the system's extraction confidence, which measures whether *the model* understood the message; this measures whether *the person asking* is confident in their own request.
-- **`overrides_prior_decision`** - the request reverses or contradicts a decision someone else already made.
+- **`new_information_present`** - the requester supplies a concrete new fact (a recurrence, a named root cause, a sign-off), as opposed to a hunch or an assumption.
+- **`overrides_prior_decision`** - the request reverses or contradicts a decision someone already made.
 
-Both would join the flag group in the similarity function, giving the decision node a way to
-separate the two `reopen` clusters that are currently identical to it. This is a concrete,
-specified change with a clear mechanism, not an open-ended limitation - and it was identified
-precisely because the follow-up experiment failed in an informative way.
+**Both were implemented (configuration D) and both work at the extraction layer.** The model
+extracts them correctly and they separate the `reopen` cluster exactly along the label
+boundary: the trusting-`act` reopens carry `new_information_present: true`, the trusting-`ask`
+reopens carry `false`.
+
+The gate nevertheless still fails, so the remaining identified gap is **no longer the fields**.
+It is the **operation-versus-flag weighting**: an operation match is worth 0.60 while the flag
+evidence that distinguishes these two clusters is worth 0.06 per flag, so the operation match
+still outweighs the signal that should override it. Configuration E fixed one half of this by
+making the per-flag weight fixed rather than a shared budget; closing the rest would require
+lowering `W_OPERATION` itself, which cannot be chosen honestly after seeing the gate result. It
+would have to be picked and frozen before the next evaluation.
 
 #### Before/after: every eval run, real numbers only
 

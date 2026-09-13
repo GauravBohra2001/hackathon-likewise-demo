@@ -200,7 +200,11 @@ def confirm_draft(draft_id):
           f"for persona '{learned['persona']}'")
     name, _, _ = humanize.describe_target(d["target"])
     sl.post(f"*Approved and done.* Someone confirmed this, so I went ahead with {name}.\n"
-            f"Result: {summary}", thread_ts=d.get("slack_thread_ts"))
+            f"Result: {summary}\n"
+            f"_I also saved this as an '{learned['label']}' example for the "
+            f"{learned['persona']} profile, so it counts towards similar requests in future. "
+            f"It does not mean I will act automatically next time._",
+            thread_ts=d.get("slack_thread_ts"))
     return d, summary, raw
 
 
@@ -307,7 +311,10 @@ def act_node_hitl(state):
     if not approved:
         d = reject_draft(draft["id"], note)
         slack = sl.post(f"*Cancelled.* Someone declined this, so nothing was changed."
-                        f"{(' Reason given: ' + note) if note else ''}")
+                        f"{(' Reason given: ' + note) if note else ''}\n"
+                        f"_I saved this as a 'refuse' example for the {d['persona']} profile, "
+                        f"so it counts towards similar requests in future._",
+                        thread_ts=d.get("slack_thread_ts"))
         return {"label": "ask", "committed": False, "draft": d,
                 "summary": f"REJECTED - draft {draft['id']} not committed, nothing executed.",
                 "raw": None, "slack": slack}
