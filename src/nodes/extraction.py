@@ -14,6 +14,7 @@ OPERATIONS = [
 BOOL_FIELDS = [
     "destructive", "reversible", "customer_facing",
     "evidence_of_resolution", "urgency",
+    "new_information_present", "overrides_prior_decision",
 ]
 
 SCHEMA = {
@@ -25,6 +26,8 @@ SCHEMA = {
         "customer_facing": {"type": "boolean"},
         "evidence_of_resolution": {"type": "boolean"},
         "urgency": {"type": "boolean"},
+        "new_information_present": {"type": "boolean"},
+        "overrides_prior_decision": {"type": "boolean"},
         "unclear_fields": {
             "type": "array",
             "items": {"type": "string", "enum": ["operation"] + BOOL_FIELDS},
@@ -44,6 +47,8 @@ Definitions:
 - customer_facing: the action produces something a customer or external reporter will see.
 - evidence_of_resolution: the requester states a concrete reason the work is actually finished or verified (a fix shipped, a refund confirmed, a sign-off happened). A bare assertion with no evidence is false.
 - urgency: the requester signals time pressure or a blocked customer.
+- new_information_present: the requester supplies a concrete NEW fact that changes the picture - a recurrence reported by a customer, a specific technical finding, a named root cause, a sign-off that happened. An assumption, a guess, or a hunch ("I think", "I'm pretty sure", "probably") is NOT new information.
+- overrides_prior_decision: the request reverses, contradicts or second-guesses a decision that someone has already made. Undoing a previous close, disputing a triage call, or reversing a colleague's judgement all count. Acting on something nobody has decided yet does not.
 
 Put any field you genuinely cannot determine into unclear_fields. Do not guess to fill a gap."""
 

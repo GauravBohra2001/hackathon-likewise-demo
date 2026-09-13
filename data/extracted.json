@@ -10,7 +10,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "GH #2",
     "confidence": "high",
@@ -29,7 +31,9 @@
       "reversible": false,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#2",
     "confidence": "high",
@@ -48,7 +52,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": true
+      "urgency": true,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "HAC-5",
     "confidence": "high",
@@ -67,7 +73,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "HAC-6",
     "confidence": "high",
@@ -86,7 +94,9 @@
       "reversible": true,
       "customer_facing": true,
       "evidence_of_resolution": true,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#3",
     "confidence": "high",
@@ -105,7 +115,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": true
+      "urgency": false,
+      "new_information_present": false,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#1",
     "confidence": "high",
@@ -124,7 +136,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#1",
     "confidence": "high",
@@ -143,7 +157,9 @@
       "reversible": false,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "HAC-7",
     "confidence": "high",
@@ -162,7 +178,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": true,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#3",
     "confidence": "high",
@@ -181,7 +199,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": true
     },
     "extracted_target": "#2",
     "confidence": "high",
@@ -200,7 +220,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": false,
+      "overrides_prior_decision": false
     },
     "extracted_target": "HAC-5",
     "confidence": "high",
@@ -219,7 +241,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#1",
     "confidence": "high",
@@ -238,7 +262,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "HAC-7",
     "confidence": "high",
@@ -257,7 +283,9 @@
       "reversible": true,
       "customer_facing": true,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": false,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#3",
     "confidence": "high",
@@ -276,7 +304,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": true,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#1",
     "confidence": "high",
@@ -293,9 +323,11 @@
       "operation": "delete",
       "destructive": true,
       "reversible": false,
-      "customer_facing": true,
+      "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": false,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#3",
     "confidence": "high",
@@ -314,7 +346,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": true,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "HAC-6",
     "confidence": "high",
@@ -333,7 +367,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": true
+      "urgency": true,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "HAC-5",
     "confidence": "high",
@@ -352,7 +388,9 @@
       "reversible": true,
       "customer_facing": true,
       "evidence_of_resolution": false,
-      "urgency": true
+      "urgency": true,
+      "new_information_present": false,
+      "overrides_prior_decision": false
     },
     "extracted_target": "HAC-5",
     "confidence": "high",
@@ -371,7 +409,9 @@
       "reversible": true,
       "customer_facing": true,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": false,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#2",
     "confidence": "high",
@@ -390,7 +430,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": false,
+      "overrides_prior_decision": false
     },
     "extracted_target": "",
     "confidence": "low",
@@ -411,7 +453,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": false,
+      "overrides_prior_decision": true
     },
     "extracted_target": "#1",
     "confidence": "high",
@@ -430,7 +474,9 @@
       "reversible": true,
       "customer_facing": true,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": false
     },
     "extracted_target": "#3",
     "confidence": "high",
@@ -449,7 +495,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": true
+      "urgency": true,
+      "new_information_present": true,
+      "overrides_prior_decision": true
     },
     "extracted_target": "#3",
     "confidence": "high",
@@ -468,7 +516,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": true,
+      "overrides_prior_decision": true
     },
     "extracted_target": "#2",
     "confidence": "high",
@@ -487,7 +537,9 @@
       "reversible": true,
       "customer_facing": false,
       "evidence_of_resolution": false,
-      "urgency": false
+      "urgency": false,
+      "new_information_present": false,
+      "overrides_prior_decision": true
     },
     "extracted_target": "#1",
     "confidence": "high",

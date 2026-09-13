@@ -11,11 +11,12 @@ Order of evaluation is fixed and must not be reordered:
 import re
 from difflib import SequenceMatcher
 
-FLAGS = ["destructive", "reversible", "customer_facing", "evidence_of_resolution", "urgency"]
+FLAGS = ["destructive", "reversible", "customer_facing", "evidence_of_resolution", "urgency",
+         "new_information_present", "overrides_prior_decision"]
 
 # --- similarity weights: operation match dominates, text similarity is smallest ---
 W_OPERATION = 0.60
-W_FLAGS = 0.30          # 0.06 per matching flag across the 5 flags
+W_FLAGS = 0.30          # spread evenly across the flag set (now 7 flags)
 W_TEXT = 0.10
 
 # --- calibration constants (set from principle before the eval was run) ---

@@ -14,10 +14,11 @@ for e in data["examples"]:
         "cautious": e["cautious"], "trusting": e["trusting"],
     })
     ex = r["extraction"]
-    flags = "".join(k[0].upper() if ex[k] else "-" for k in
-                    ["destructive", "reversible", "customer_facing", "evidence_of_resolution", "urgency"])
-    print(f"{e['id']:>2}. op={ex['operation']:<14} flags[DRCEU]={flags}  conf={r['confidence']:<4} "
-          f"| cautious={e['cautious']:<6} trusting={e['trusting']:<6} | {e['text'][:44]}")
+    keys = ["destructive", "reversible", "customer_facing", "evidence_of_resolution",
+            "urgency", "new_information_present", "overrides_prior_decision"]
+    flags = "".join("Y" if ex[k] else "-" for k in keys)
+    print(f"{e['id']:>2}. op={ex['operation']:<14} [DRCEU|NO]={flags}  conf={r['confidence']:<4} "
+          f"| c={e['cautious']:<6} t={e['trusting']:<6} | {e['text'][:38]}")
 
 json.dump(out, open("data/extracted.json", "w"), indent=2)
 print(f"\nWrote data/extracted.json ({len(out)} rows)")
