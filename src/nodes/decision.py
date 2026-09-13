@@ -16,7 +16,11 @@ FLAGS = ["destructive", "reversible", "customer_facing", "evidence_of_resolution
 
 # --- similarity weights: operation match dominates, text similarity is smallest ---
 W_OPERATION = 0.60
-W_FLAGS = 0.30          # spread evenly across the flag set (now 7 flags)
+# Each flag carries a FIXED weight rather than a share of a fixed budget. Derived from the
+# original 5-flag design, where the 0.30 flag budget gave each flag 0.30 / 5 = 0.06. Holding
+# that per-flag value constant means adding a flag adds discriminating power instead of
+# diluting every existing flag. Frozen before the evaluation that follows it.
+PER_FLAG_WEIGHT = 0.06
 W_TEXT = 0.10
 
 # --- calibration constants (set from principle before the eval was run) ---
@@ -49,7 +53,7 @@ def similarity(query_ex, query_text, cand_ex, cand_text):
     shared = [f for f in FLAGS if f in query_ex and f in cand_ex]
     matching_flags = sum(1 for f in shared if query_ex[f] == cand_ex[f])
     txt = text_similarity(query_text, cand_text)
-    score = W_OPERATION * op + W_FLAGS * (matching_flags / len(shared)) + W_TEXT * txt
+    score = W_OPERATION * op + PER_FLAG_WEIGHT * matching_flags + W_TEXT * txt
     return score, {"operation_match": bool(op), "matching_flags": matching_flags,
                    "flags_compared": len(shared), "text_sim": round(txt, 3)}
 
