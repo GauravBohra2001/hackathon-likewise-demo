@@ -36,13 +36,13 @@ r = graph.invoke({"message": a.message, "persona": a.persona,
 if "__interrupt__" not in r:
     act = r["action"]
     print("-" * 90)
-    print(f"NO INTERRUPT — decision was {r['decision']['label'].upper()}")
+    print(f"NO INTERRUPT - decision was {r['decision']['label'].upper()}")
     print(f"RESULT  : {act['summary']}")
     raise SystemExit(0)
 
 payload = r["__interrupt__"][0].value
 print("-" * 90)
-print(">>> GRAPH SUSPENDED — approval required. Nothing has been executed. <<<")
+print(">>> GRAPH SUSPENDED - approval required. Nothing has been executed. <<<")
 print(json.dumps(payload, indent=2))
 
 state = graph.get_state(cfg)

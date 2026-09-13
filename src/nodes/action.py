@@ -162,7 +162,7 @@ def confirm_draft(draft_id):
     d["committed_at"] = datetime.now(timezone.utc).isoformat()
     d["result"] = summary
     _save_drafts(drafts)
-    sl.post(f":white_check_mark: Confirmed draft `{draft_id}` and committed it — {summary}")
+    sl.post(f"[CONFIRMED] Draft `{draft_id}` approved and committed: {summary}")
     return d, summary, raw
 
 
@@ -179,9 +179,9 @@ def act_node(state):
            "summary": None, "raw": None, "slack": None}
 
     if label == "refuse":
-        out["summary"] = "REFUSED — nothing executed against any app."
+        out["summary"] = "REFUSED - nothing executed against any app."
         out["slack"] = sl.post(
-            f":no_entry: *Refused* — {message}\n"
+            f"*[REFUSED]* {message}\n"
             f"> {decision['reason']}\n"
             f"> Nothing was executed in GitHub or Linear.")
         return out
@@ -189,11 +189,11 @@ def act_node(state):
     if label == "ask":
         draft = write_draft(op, target, extraction, message, persona, decision["reason"])
         out["draft"] = draft
-        out["summary"] = (f"HELD as draft `{draft['id']}` — written, NOT committed. "
+        out["summary"] = (f"HELD as draft `{draft['id']}` - written, NOT committed. "
                           f"Confirm separately to commit.")
         tgt = (target or {}).get("identifier") or f"#{(target or {}).get('number', '?')}"
         out["slack"] = sl.post(
-            f":raised_hand: *Asking first* — {message}\n"
+            f"*[ASKING FIRST]* {message}\n"
             f"> {decision['reason']}\n"
             f"> Proposed: `{op}` on *{tgt}*. Draft `{draft['id']}` written but NOT committed.")
         return out
@@ -201,7 +201,7 @@ def act_node(state):
     summary, raw = execute(op, target, extraction, message, persona)
     out.update({"committed": True, "summary": summary, "raw": raw})
     out["slack"] = sl.post(
-        f":white_check_mark: *Done* — {message}\n"
+        f"*[DONE]* {message}\n"
         f"> {decision['reason']}\n"
         f"> Executed: {summary}")
     return out
@@ -246,7 +246,7 @@ def act_node_hitl(state):
     draft = write_draft(op, target, extraction, message, persona, decision["reason"])
     tgt = (target or {}).get("identifier") or f"#{(target or {}).get('number', '?')}"
 
-    sl.post(f":raised_hand: *Asking first* — {message}\n"
+    sl.post(f"*[ASKING FIRST]* {message}\n"
             f"> {decision['reason']}\n"
             f"> Proposed: `{op}` on *{tgt}*. Draft `{draft['id']}` held, awaiting approval.")
 
@@ -267,12 +267,12 @@ def act_node_hitl(state):
 
     if not approved:
         d = reject_draft(draft["id"], note)
-        slack = sl.post(f":x: *Rejected* — draft `{draft['id']}` was not approved. "
+        slack = sl.post(f"*[REJECTED]* Draft `{draft['id']}` was not approved. "
                         f"Nothing executed.{(' Note: ' + note) if note else ''}")
         return {"label": "ask", "committed": False, "draft": d,
-                "summary": f"REJECTED — draft {draft['id']} not committed, nothing executed.",
+                "summary": f"REJECTED - draft {draft['id']} not committed, nothing executed.",
                 "raw": None, "slack": slack}
 
     d, summary, raw = confirm_draft(draft["id"])
     return {"label": "ask", "committed": True, "draft": d,
-            "summary": f"APPROVED — {summary}", "raw": raw, "slack": None}
+            "summary": f"APPROVED - {summary}", "raw": raw, "slack": None}
