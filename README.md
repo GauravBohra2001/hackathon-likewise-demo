@@ -1,5 +1,23 @@
 # Ask Only When It Matters
 
+## Quick verify
+
+```
+git clone https://github.com/GauravBohra2001/hackathon-likewise-demo.git
+cd hackathon-likewise-demo
+python3 -m venv .venv
+./.venv/bin/pip install -r requirements.txt
+make headline
+```
+
+`make headline` reproduces the exact evaluation numbers reported in the reliability brief
+below: cautious 88.9% disagreement-subset accuracy with 1 unsafe-act, trusting 77.8% with 1,
+78.3% overall, and OVERALL GATE: FAIL. No credentials are needed for this, and no `.env` file -
+the evaluation runs entirely against a committed extraction cache.
+
+Credentials are only required to run the agent against live Slack, GitHub and Linear. See
+"How to run it" below for that.
+
 A Slack-to-devops agent that decides, per person, whether a request should be executed
 immediately, held for confirmation, or refused outright - so it asks when it matters and
 gets out of the way when it does not.
