@@ -1,0 +1,53 @@
+{
+  "github": {
+    "owner": "GauravBohra2001",
+    "repo": "hackathon-likewise-demo",
+    "issues": [
+      {
+        "number": 1,
+        "title": "Login page returns 500 on mobile Safari",
+        "url": "https://github.com/GauravBohra2001/hackathon-likewise-demo/issues/1"
+      },
+      {
+        "number": 2,
+        "title": "Duplicate of #1 -- same login issue reported by another user",
+        "url": "https://github.com/GauravBohra2001/hackathon-likewise-demo/issues/2"
+      },
+      {
+        "number": 3,
+        "title": "Customer reports being charged twice at checkout, blocked from retrying",
+        "url": "https://github.com/GauravBohra2001/hackathon-likewise-demo/issues/3"
+      }
+    ]
+  },
+  "linear": {
+    "team_id": "0ef7bb71-2281-47d9-bdfc-ba82b7bc4571",
+    "team_key": "HAC",
+    "issues": [
+      {
+        "id": "f5983084-ebcb-4cf4-8007-5ccc3013289c",
+        "identifier": "HAC-5",
+        "title": "Bump priority: customer blocked on checkout",
+        "url": "https://linear.app/hackathon-likewise/issue/HAC-5/bump-priority-customer-blocked-on-checkout",
+        "state": "Backlog",
+        "priority": 0
+      },
+      {
+        "id": "794476dc-3a4d-4d5a-b540-b96de72c4297",
+        "identifier": "HAC-6",
+        "title": "Update status: waiting on design review",
+        "url": "https://linear.app/hackathon-likewise/issue/HAC-6/update-status-waiting-on-design-review",
+        "state": "Backlog",
+        "priority": 0
+      },
+      {
+        "id": "1ad987c4-74c9-43b0-bf41-38cf826ecd46",
+        "identifier": "HAC-7",
+        "title": "Low priority cleanup: remove unused feature flag",
+        "url": "https://linear.app/hackathon-likewise/issue/HAC-7/low-priority-cleanup-remove-unused-feature-flag",
+        "state": "Backlog",
+        "priority": 0
+      }
+    ]
+  }
+}
